@@ -17,7 +17,7 @@ valid_backbone_types = {
     'resnet152'
 }
 
-backbone_channel_sizes = {
+backbone_type_to_channel_sizes = {
     'resnet18' : [ 64, 128,  256,  512],
     'resnet34' : [ 64, 128,  256,  512],
     'resnet50' : [256, 512, 1024, 2048],
