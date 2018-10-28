@@ -52,7 +52,7 @@ _C.immutable(True)
 
 def validate_config(config):
     """
-    Check validity of backbone configs
+    Check validity of configs
     """
     assert config.TYPE in valid_backbone_types, \
         '{} is invalid backbone type'.format(config.TYPE)
