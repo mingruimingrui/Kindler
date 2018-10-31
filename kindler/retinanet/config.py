@@ -32,6 +32,8 @@ _C.BACKBONE.immutable(False)
 # Refer to kindler.fpn.config for full list of configs
 # You can safely ignore BACKBONE_CHANNEL_SIZES, MIN_INPUT_LEVEL and
 # MAX_INPUT_LEVEL as these are values that will be inferred from your backbone
+# However do note that the FPN configs will determine the feature levels at
+# which retinanet will be predicting on
 
 # ---------------------------------------------------------------------------- #
 # Classifier and regressor options
