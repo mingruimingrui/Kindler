@@ -62,11 +62,6 @@ class RetinaNet(torch.nn.Module):
 
         return cls_output, reg_output
 
-
-    # ##########################################################################
-    # _make_modules
-    # ##########################################################################
-
     def _make_modules(self):
         self.backbone = Backbone(**self.config.BACKBONE)
         self.fpn = FPN(**self.config.FPN)
