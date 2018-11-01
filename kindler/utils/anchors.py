@@ -168,9 +168,9 @@ def anchor_targets_bbox(
         negative_overlap: IoU overlap for negative anchors (all anchors with overlap < negative_overlap are negative).
         positive_overlap: IoU overlap or positive anchors (all anchors with overlap > positive_overlap are positive).
     Returns
-        cls_targets: torch.Tensor containing the classification targets at each anchor position
+        cls_target: torch.Tensor containing the classification target at each anchor position
             shape will be (A, num_classes)
-        bbox_targets: torch.Tensor containing the detection bbox at each anchor position
+        bbox_target: torch.Tensor containing the detection bbox at each anchor position
             shape will be (A, 4) if not using class specific bbox
             or (A, 4 * num_classes) if using class specific bbox
         anchor_states: anchor_states: torch.Tensor of shape (N,) containing the state of each anchor (-1 for ignore, 0 for bg, 1 for fg).
@@ -178,11 +178,11 @@ def anchor_targets_bbox(
     # Create blobs that will hold results
     # anchor states: 1 is positive, 0 is negative, -1 is dont care
     anchor_states = torch.zeros_like(anchors[:, 0])
-    cls_targets = torch.stack([anchor_states] * num_classes, dim=1)
+    cls_target = torch.stack([anchor_states] * num_classes, dim=1)
     if use_class_specific_bbox:
-        bbox_targets = torch.stack([anchor_states] * 4 * num_classes, dim=1)
+        bbox_target = torch.stack([anchor_states] * 4 * num_classes, dim=1)
     else:
-        bbox_targets = torch.stack([anchor_states] * 4, dim=1)
+        bbox_target = torch.stack([anchor_states] * 4, dim=1)
 
     if annotations.shape[0] > 0:
         # obtain indices of gt annotations with the greatest overlap
@@ -208,19 +208,19 @@ def anchor_targets_bbox(
             # Possible improvements with scatter functions
             positive_cls  = annotations[:, 4].long()
             positive_bbox = annotations[:, :4]
-            positive_cls_targets  = cls_targets[positive_inds]
-            positive_bbox_targets = bbox_targets[positive_inds]
+            positive_cls_target  = cls_target[positive_inds]
+            positive_bbox_target = bbox_target[positive_inds]
 
             for i in range(total_positive_inds):
-                positive_cls_targets[i, positive_cls[i]] = 1
+                positive_cls_target[i, positive_cls[i]] = 1
                 if use_class_specific_bbox:
                     bbox_start_pos = positive_cls[i] * 4
-                    positive_bbox_targets[i, bbox_start_pos:bbox_start_pos+4] = positive_bbox[i]
+                    positive_bbox_target[i, bbox_start_pos:bbox_start_pos+4] = positive_bbox[i]
                 else:
-                    positive_bbox_targets[i] = positive_bbox[i]
+                    positive_bbox_target[i] = positive_bbox[i]
 
-            cls_targets[positive_inds] = positive_cls_targets
-            bbox_targets[positive_inds] = positive_bbox_targets
+            cls_target[positive_inds] = positive_cls_target
+            bbox_target[positive_inds] = positive_bbox_target
 
     # ignore annotations outside of image
     if mask_shape is not None:
@@ -228,4 +228,4 @@ def anchor_targets_bbox(
         inds = (anchors_centers[:, 0] >= mask_shape[-1]) | (anchors_centers[:, 1] >= mask_shape[-2])
         anchor_states[inds] = -1
 
-    return cls_targets, bbox_targets, anchor_states
+    return cls_target, bbox_target, anchor_states
