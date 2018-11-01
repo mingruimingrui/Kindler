@@ -30,15 +30,18 @@ class RetinaNet(torch.nn.Module):
 
         features = self.fpn(self.backbone(image_batch))
 
+        # Generate anchors at each feature level
         anchors = self.compute_anchors(features)
-        cls_output[level], reg_output[level] = compute_cls_reg_output(features)
+        anchors = self.combine_levels(anchors)
 
-        anchors    = self.combine_levels(anchors)
+        # Generate classification and regression outputs at each feature level
+        cls_output, reg_output = self.compute_cls_reg_output(features)
         cls_output = self.combine_levels(cls_output)
         reg_output = self.combine_levels(reg_output)
 
         # if self.training:
-        #     self.compute_targets(annotations_batch, anchors)
+        #     with torch.no_grad():
+        #         temp = self.compute_targets(annotations_batch, anchors)
         #     loss
         # else:
         #     detections
