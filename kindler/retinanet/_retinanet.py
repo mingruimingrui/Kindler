@@ -270,6 +270,7 @@ class ComputeAnchors(torch.nn.Module):
 
         return anchors
 
+
 class ComputeTargets(torch.nn.Module):
     def __init__(
         self,
@@ -290,20 +291,26 @@ class ComputeTargets(torch.nn.Module):
         self.positive_overlap = positive_overlap
         self.negative_overlap = negative_overlap
 
-    def forward(self, batch_annotations, anchors):
+    def forward(self, annotations_batch, anchors):
         # Create blobs to store anchor informations
         cls_batch = []
         reg_batch = []
         states_batch = []
 
-        for annotations in batch_annotations:
-            cls_targets, reg_targets, anchor_states = utils_anchors.anchor_targets_bbox(
+        for annotations in annotations_batch:
+            cls_targets, bbox_targets, anchor_states = utils_anchors.anchor_targets_bbox(
                 anchors=anchors,
                 annotations=annotations,
                 num_classes=self.num_classes,
                 use_class_specific_bbox=self.use_class_specific_bbox,
                 positive_overlap=self.positive_overlap,
                 negative_overlap=self.negative_overlap
+            )
+            reg_targets = utils_anchors.bbox_transform(
+                anchors=anchors,
+                gt_boxes=bbox_targets,
+                mean=self.regression_mean,
+                std=self.regression_std
             )
 
             cls_batch.append(cls_targets)

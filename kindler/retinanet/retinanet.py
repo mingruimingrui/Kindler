@@ -15,21 +15,44 @@ from ._retinanet import (
 class RetinaNet(torch.nn.Module):
     def __init__(self, config_file=None, num_classes=None, **kwargs):
         super(RetinaNet, self).__init__()
+
+        # Edit default configs if num_classes is provided
         config_ = config.clone()
         if num_classes is not None:
             config_.update({'TARGET': {'NUM_CLASSES': num_classes}})
+
         self.config = config_.make_config(config_file, validate_config, **kwargs)
         self._make_modules()
 
     def forward(self, image_batch, annotations_batch=None):
-        # if self.training:
-        #     assert annotations_batch is not None
+        if self.training:
+            assert annotations_batch is not None
 
         features = self.fpn(self.backbone(image_batch))
 
         anchors = self.compute_anchors(features)
+        cls_output[level], reg_output[level] = compute_cls_reg_output(features)
+
+        anchors    = self.combine_levels(anchors)
+        cls_output = self.combine_levels(cls_output)
+        reg_output = self.combine_levels(reg_output)
+
+        # if self.training:
+        #     self.compute_targets(annotations_batch, anchors)
+        #     loss
+        # else:
+        #     detections
+
+        return anchors, cls_output, reg_output
+
+    def combine_levels(self, x_dict):
+        x = [x_dict[i] for i in self.feature_levels]
+        return torch.cat(x, dim=-2)
+
+    def compute_cls_reg_output(self, features):
         cls_output = {}
         reg_output = {}
+
         for level in self.feature_levels:
             if self.config.COMBINED.USE:
                 cls_output[level], reg_output[level] = self.detector(features[level])
@@ -37,15 +60,12 @@ class RetinaNet(torch.nn.Module):
                 cls_output[level] = self.classifier(features[level])
                 reg_output[level] = self.regressor(features[level])
 
-        anchors    = self.combine_levels(anchors)
-        cls_output = self.combine_levels(cls_output)
-        reg_output = self.combine_levels(reg_output)
+        return cls_output, reg_output
 
-        return anchors, cls_output, reg_output
 
-    def combine_levels(self, x_dict):
-        x = [x_dict[i] for i in self.feature_levels]
-        return torch.cat(x, dim=-2)
+    # ##########################################################################
+    # _make_modules
+    # ##########################################################################
 
     def _make_modules(self):
         self.backbone = Backbone(**self.config.BACKBONE)
