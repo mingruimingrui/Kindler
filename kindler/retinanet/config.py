@@ -4,10 +4,8 @@ Retinanet configs
 import logging
 from ..utils.config_system import ConfigSystem
 from ..backbone.config import config as backbone_config
-from ..backbone.config import validate_config as validate_backbone_config
 from ..backbone.config import backbone_type_to_channel_sizes
 from ..fpn.config import config as fpn_config
-from ..fpn.config import validate_config as validate_fpn_config
 
 logger = logging.getLogger(__name__)
 
@@ -163,15 +161,10 @@ def validate_config(config):
     """
     Check validity of configs
     """
-    # Validate backbone
-    validate_backbone_config(config.BACKBONE)
-
-    # Determine backbone_channel_sizes and validate fpn
+    # Determine backbone_channel_sizes and update FPN configs
     backbone_channel_sizes = backbone_type_to_channel_sizes[config.BACKBONE.TYPE]
     backbone_channel_sizes = backbone_channel_sizes[:config.BACKBONE.LAST_CONV - 1]
-
     config.FPN.update({'BACKBONE_CHANNEL_SIZES': backbone_channel_sizes})
-    validate_fpn_config(config.FPN)
 
     assert config.TARGET.NUM_CLASSES >= 1, \
         'Num classes is a required variable, it cannot be {}'.format(config.TARGET.NUM_CLASSES)
