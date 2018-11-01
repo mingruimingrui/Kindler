@@ -154,25 +154,35 @@ def anchor_targets_bbox(
     annotations,
     num_classes,
     mask_shape=None,
-    negative_overlap=0.4,
-    positive_overlap=0.5
+    use_class_specific_bbox=False,
+    positive_overlap=0.5,
+    negative_overlap=0.4
 ):
     """ Generate anchor targets for bbox detection.
     Args
-        anchors: torch.Tensor of annotations of shape (N, 4) for (x1, y1, x2, y2).
-        annotations: torch.Tensor of shape (N, 5) for (x1, y1, x2, y2, label).
+        anchors: torch.Tensor of shape (A, 4) in the (x1, y1, x2, y2) format.
+        annotations: torch.Tensor of shape (N, 5) in the (x1, y1, x2, y2, label) format.
         num_classes: Number of classes to predict.
         mask_shape: If the image is padded with zeros, mask_shape can be used to mark the relevant part of the image.
+        use_class_specific_bbox: Should each class have it's own bbox?
         negative_overlap: IoU overlap for negative anchors (all anchors with overlap < negative_overlap are negative).
         positive_overlap: IoU overlap or positive anchors (all anchors with overlap > positive_overlap are positive).
     Returns
-        labels: torch.Tensor of shape (A, num_classes) where a row consists of 0 for negative and 1 for positive for a certain class.
-        annotations: torch.Tensor of shape (A, 5) for (x1, y1, x2, y2, label) containing the annotations corresponding to each anchor or 0 if there is no corresponding anchor.
-        anchor_states: torch.Tensor of shape (N,) containing the state of an anchor (-1 for ignore, 0 for bg, 1 for fg).
+        cls_targets: torch.Tensor containing the classification targets at each anchor position
+            shape will be (A, num_classes)
+        bbox_targets: torch.Tensor containing the detection bbox at each anchor position
+            shape will be (A, 4) if not using class specific bbox
+            or (A, 4 * num_classes) if using class specific bbox
+        anchor_states: anchor_states: torch.Tensor of shape (N,) containing the state of each anchor (-1 for ignore, 0 for bg, 1 for fg).
     """
+    # Create blobs that will hold results
     # anchor states: 1 is positive, 0 is negative, -1 is dont care
     anchor_states = torch.zeros_like(anchors[:, 0])
-    labels        = torch.stack([anchor_states] * num_classes, dim=1)
+    cls_targets = torch.stack([anchor_states] * num_classes, dim=1)
+    if use_class_specific_bbox:
+        bbox_targets = torch.stack([anchor_states] * 4 * num_classes, dim=1)
+    else:
+        bbox_targets = torch.stack([anchor_states] * 4, dim=1)
 
     if annotations.shape[0] > 0:
         # obtain indices of gt annotations with the greatest overlap
@@ -181,26 +191,41 @@ def anchor_targets_bbox(
         max_overlaps         = overlaps[range(overlaps.shape[0]), argmax_overlaps_inds]
 
         # assign "dont care" labels
-        positive_indices                = max_overlaps >= positive_overlap
-        ignore_indices                  = (max_overlaps > negative_overlap) & ~positive_indices
-        anchor_states[ignore_indices]   = -1
-        anchor_states[positive_indices] = 1
+        ignore_inds                  = max_overlaps > negative_overlap
+        anchor_states[ignore_inds]   = -1
+        positive_inds                = max_overlaps >= positive_overlap
+        anchor_states[positive_inds] = 1
 
-        # compute box regression targets
-        annotations = annotations[argmax_overlaps_inds]
+        # compute classification and regression targets
+        total_positive_inds = torch.sum(positive_inds)
+        if total_positive_inds > 0:
+            annotations = annotations[argmax_overlaps_inds[positive_inds]]
 
-        # compute target class labels
-        if torch.sum(positive_indices) > 0:
-            labels[positive_indices] = labels[positive_indices].scatter(
-                1, annotations[positive_indices, 4:5].long(), 1
-            )
-    else:
-        annotations = torch.stack([anchor_states] * 5, dim=1)
+            # Scatter classification and regression targets to positive indices
+            # The current implementation is very naive and inefficient
+            # though the overall cost in the scope of training is rather
+            # insignificant
+            # Possible improvements with scatter functions
+            positive_cls  = annotations[:, 4].long()
+            positive_bbox = annotations[:, :4]
+            positive_cls_targets  = cls_targets[positive_inds]
+            positive_bbox_targets = bbox_targets[positive_inds]
+
+            for i in range(total_positive_inds):
+                positive_cls_targets[i, positive_cls[i]] = 1
+                if use_class_specific_bbox:
+                    bbox_start_pos = positive_cls[i] * 4
+                    positive_bbox_targets[i, bbox_start_pos:bbox_start_pos+4] = positive_bbox[i]
+                else:
+                    positive_bbox_targets[i] = positive_bbox[i]
+
+            cls_targets[positive_inds] = positive_cls_targets
+            bbox_targets[positive_inds] = positive_bbox_targets
 
     # ignore annotations outside of image
     if mask_shape is not None:
-        anchors_centers        = (anchors[:, :2] + anchors[:, 2:]) / 2
-        indices                = (anchors_centers[:, 0] >= mask_shape[-2]) | (anchors_centers[:, 1] >= mask_shape[-1])
-        anchor_states[indices] = -1
+        anchors_centers = (anchors[:, :2] + anchors[:, 2:]) / 2
+        inds = (anchors_centers[:, 0] >= mask_shape[-1]) | (anchors_centers[:, 1] >= mask_shape[-2])
+        anchor_states[inds] = -1
 
-    return labels, annotations, anchor_states
+    return cls_targets, bbox_targets, anchor_states
