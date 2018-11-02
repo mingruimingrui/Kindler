@@ -128,7 +128,7 @@ def bbox_transform_inv(boxes, deltas, mean=0.0, std=0.2):
     Before applying the deltas to the boxes, the normalization that was previously applied (in the generator) has to be removed.
     The mean and std are the mean and std as applied in the generator. They are unnormalized in this function and then applied to the boxes.
     Args
-        boxes : torch.Tensor of shape (B, N, 4), where B is the batch size, N the number of boxes and 4 values for (x1, y1, x2, y2).
+        boxes : torch.Tensor of shape (N, 4), where N the number of boxes and 4 values for (x1, y1, x2, y2).
         deltas: torch.Tensor of same shape as boxes. These deltas (d_x1, d_y1, d_x2, d_y2) are a factor of the width/height.
         mean  : The mean value used when computing deltas (defaults to [0, 0, 0, 0]).
         std   : The standard deviation used when computing deltas (defaults to [0.2, 0.2, 0.2, 0.2]).
@@ -136,15 +136,15 @@ def bbox_transform_inv(boxes, deltas, mean=0.0, std=0.2):
         A torch.Tensor of the same shape as boxes, but with deltas applied to each box.
         The mean and std are used during training to normalize the regression values (networks love normalization).
     """
-    width  = boxes[:, :, 2] - boxes[:, :, 0]
-    height = boxes[:, :, 3] - boxes[:, :, 1]
+    width  = boxes[..., 2] - boxes[..., 0]
+    height = boxes[:, :, 3] - boxes[..., 1]
 
-    x1 = boxes[:, :, 0] + (deltas[:, :, 0] * std + mean) * width
-    y1 = boxes[:, :, 1] + (deltas[:, :, 1] * std + mean) * height
-    x2 = boxes[:, :, 2] + (deltas[:, :, 2] * std + mean) * width
-    y2 = boxes[:, :, 3] + (deltas[:, :, 3] * std + mean) * height
+    x1 = boxes[..., 0] + (deltas[..., 0] * std + mean) * width
+    y1 = boxes[..., 1] + (deltas[..., 1] * std + mean) * height
+    x2 = boxes[..., 2] + (deltas[..., 2] * std + mean) * width
+    y2 = boxes[..., 3] + (deltas[..., 3] * std + mean) * height
 
-    pred_boxes = torch.stack([x1, y1, x2, y2], dim=2)
+    pred_boxes = torch.stack([x1, y1, x2, y2], dim=-1)
 
     return pred_boxes
 
