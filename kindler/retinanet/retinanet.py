@@ -41,8 +41,10 @@ class RetinaNet(torch.nn.Module):
         reg_output = self.combine_levels(reg_output)
 
         if self.training:
+            # Compute targets and generate loss_dict if training
             with torch.no_grad():
                 cls_target, reg_target, anchor_states = self.compute_targets(annotations_batch, anchors)
+
             loss_dict = self.compute_losses(
                 cls_output=cls_output,
                 reg_output=reg_output,
@@ -50,10 +52,13 @@ class RetinaNet(torch.nn.Module):
                 reg_target=reg_target,
                 anchor_states=anchor_states
             )
-        else:
-            detections
 
-        return anchors, cls_output, reg_output
+            return loss_dict
+
+        else:
+            # Generate detections if evaluating
+            detections = 'TBI'
+            return detections
 
     def combine_levels(self, x_dict):
         x = [x_dict[i] for i in self.feature_levels]
