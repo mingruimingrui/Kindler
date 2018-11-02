@@ -8,7 +8,8 @@ from ._retinanet import (
     RegressionHead,
     CombinedHead,
     ComputeAnchors,
-    ComputeTargets
+    ComputeTargets,
+    ComputeLosses
 )
 
 
@@ -39,12 +40,18 @@ class RetinaNet(torch.nn.Module):
         cls_output = self.combine_levels(cls_output)
         reg_output = self.combine_levels(reg_output)
 
-        # if self.training:
-        #     with torch.no_grad():
-        #         temp = self.compute_targets(annotations_batch, anchors)
-        #     loss
-        # else:
-        #     detections
+        if self.training:
+            with torch.no_grad():
+                cls_target, reg_target, anchor_states = self.compute_targets(annotations_batch, anchors)
+            loss_dict = self.compute_losses(
+                cls_output=cls_output,
+                reg_output=reg_output,
+                cls_target=cls_target,
+                reg_target=reg_target,
+                anchor_states=anchor_states
+            )
+        else:
+            detections
 
         return anchors, cls_output, reg_output
 
@@ -80,7 +87,7 @@ class RetinaNet(torch.nn.Module):
                 num_anchors=num_anchors,
                 num_classes=self.config.TARGET.NUM_CLASSES,
                 use_class_specific_bbox=self.config.TARGET.CLASS_SPECIFIC_BBOX,
-                use_background_predictor=self.config.TARGET.BACKGROUND_PREDICTOR,
+                use_bg_predictor=self.config.TARGET.BG_PREDICTOR,
                 prior_prob=self.config.INITIALIZATION.PRIOR_PROB
             )
         else:
@@ -90,7 +97,7 @@ class RetinaNet(torch.nn.Module):
                 num_layers=self.config.CLASSIFIER.NUM_LAYERS,
                 num_anchors=num_anchors,
                 num_classes=self.config.TARGET.NUM_CLASSES,
-                use_background_predictor=self.config.TARGET.BACKGROUND_PREDICTOR,
+                use_bg_predictor=self.config.TARGET.BG_PREDICTOR,
                 prior_prob=self.config.INITIALIZATION.PRIOR_PROB
             )
             self.regressor = RegressionHead(
@@ -113,7 +120,15 @@ class RetinaNet(torch.nn.Module):
         self.compute_targets = ComputeTargets(
             num_classes=self.config.TARGET.NUM_CLASSES,
             use_class_specific_bbox=self.config.TARGET.CLASS_SPECIFIC_BBOX,
-            use_background_predictor=self.config.TARGET.BACKGROUND_PREDICTOR,
             positive_overlap=self.config.TARGET.POSITIVE_OVERLAP,
             negative_overlap=self.config.TARGET.NEGATIVE_OVERLAP
+        )
+
+        self.compute_losses = ComputeLosses(
+            use_focal_loss=self.config.LOSS.USE_FOCAL,
+            focal_alpha=self.config.LOSS.FOCAL_ALPHA,
+            focal_gamma=self.config.LOSS.FOCAL_GAMMA,
+            reg_weight=self.config.LOSS.REG_WEIGHT,
+            reg_beta=self.config.LOSS.REG_BETA,
+            use_bg_predictor=self.config.TARGET.BG_PREDICTOR
         )
