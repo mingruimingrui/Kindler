@@ -9,7 +9,8 @@ from ._retinanet import (
     CombinedHead,
     ComputeAnchors,
     ComputeTargets,
-    ComputeLosses
+    ComputeLosses,
+    FilterDetections
 )
 
 
@@ -52,12 +53,11 @@ class RetinaNet(torch.nn.Module):
                 reg_target=reg_target,
                 anchor_states=anchor_states
             )
-
             return loss_dict
 
         else:
             # Generate detections if evaluating
-            detections = 'TBI'
+            detections = self.filter_detections(cls_output, reg_output, anchors)
             return detections
 
     def combine_levels(self, x_dict):
@@ -135,5 +135,16 @@ class RetinaNet(torch.nn.Module):
             focal_gamma=self.config.LOSS.FOCAL_GAMMA,
             reg_weight=self.config.LOSS.REG_WEIGHT,
             reg_beta=self.config.LOSS.REG_BETA,
+            use_bg_predictor=self.config.TARGET.BG_PREDICTOR
+        )
+
+        self.filter_detections = FilterDetections(
+            apply_nms=self.config.OUTPUT.APPLY_NMS,
+            class_specific_nms=self.config.OUTPUT.CLASS_SPECIFIC_NMS,
+            pre_nms_top_n=self.config.OUTPUT.PRE_NMS_TOP_N,
+            post_nms_top_n=self.config.OUTPUT.POST_NMS_TOP_N,
+            nms_thresh=self.config.OUTPUT.NMS_THRESH,
+            score_thresh=self.config.OUTPUT.SCORE_THRESH,
+            bg_thresh=self.config.OUTPUT.BG_THRESH,
             use_bg_predictor=self.config.TARGET.BG_PREDICTOR
         )

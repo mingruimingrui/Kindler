@@ -7,6 +7,7 @@ import math
 import torch
 from ..modules import FocalLoss, SmoothL1Loss
 from ..utils import anchors as utils_anchors
+from ..utils.nms import nms as box_nms
 
 conv_3x3_kwargs = {'kernel_size': 3, 'stride': 1, 'padding': 1}
 conv_1x1_kwargs = {'kernel_size': 1, 'stride': 1, 'padding': 0}
@@ -291,16 +292,12 @@ class ComputeTargets(torch.nn.Module):
         self,
         num_classes,
         use_class_specific_bbox=False,
-        regression_mean=0.0,
-        regression_std=0.2,
         positive_overlap=0.5,
         negative_overlap=0.4
     ):
         super(ComputeTargets, self).__init__()
         self.num_classes = num_classes
         self.use_class_specific_bbox = use_class_specific_bbox
-        self.regression_mean = regression_mean
-        self.regression_std = regression_std
         self.positive_overlap = positive_overlap
         self.negative_overlap = negative_overlap
 
@@ -319,12 +316,7 @@ class ComputeTargets(torch.nn.Module):
                 positive_overlap=self.positive_overlap,
                 negative_overlap=self.negative_overlap
             )
-            reg_target = utils_anchors.bbox_transform(
-                anchors=anchors,
-                gt_boxes=bbox_target,
-                mean=self.regression_mean,
-                std=self.regression_std
-            )
+            reg_target = utils_anchors.bbox_transform(anchors, bbox_target)
 
             cls_batch.append(cls_target)
             reg_batch.append(reg_target)
@@ -411,3 +403,108 @@ class ComputeLosses(torch.nn.Module):
         loss_dict['total_loss'] += loss_dict['reg_loss']
 
         return loss_dict
+
+
+class FilterDetections(torch.nn.Module):
+    def __init__(
+        self,
+        apply_nms=True,
+        class_specific_nms=True,
+        pre_nms_top_n=1000,
+        post_nms_top_n=300,
+        nms_thresh=0.5,
+        score_thresh=0.3,
+        bg_thresh=0.7,
+        use_bg_predictor=False
+    ):
+        super(FilterDetections, self).__init__()
+        self.apply_nms=apply_nms
+        self.class_specific_nms=class_specific_nms
+        self.pre_nms_top_n=pre_nms_top_n
+        self.post_nms_top_n=post_nms_top_n
+        self.nms_thresh=nms_thresh
+        self.score_thresh=score_thresh
+        self.use_bg_predictor=use_bg_predictor
+        if self.use_bg_predictor:
+            self.bg_thresh=bg_thresh
+
+    def forward(self, cls_output_batch, reg_output_batch, anchors):
+        bbox_output_batch = utils_anchors.bbox_transform_inv(anchors[None, ...], reg_output_batch)
+        batch_size, _, num_classes = cls_output_batch.shape
+
+        all_detections = []
+
+        for cls_output, bbox_output in zip(cls_output_batch, bbox_output_batch):
+            detections = {'boxes': [], 'scores': [], 'labels': []}
+
+            if self.use_bg_predictor:
+                inds_keep = cls_output[:, -1] < self.bg_thresh
+                cls_output = cls_output[inds_keep, :-1]
+                bbox_output = bbox_output[inds_keep]
+
+            if self.class_specific_nms:
+                for c in range(num_classes):
+                    filtered_output = self.filter_detections(
+                        boxes=bbox_output,
+                        scores=cls_output[:, c],
+                        labels=c
+                    )
+                    detections['boxes'].append(filtered_output[0])
+                    detections['scores'].append(filtered_output[1])
+                    detections['labels'].append(filtered_output[2])
+
+                detections['boxes'] = torch.cat(detections['boxes'], dim=0)
+                detections['scores'] = torch.cat(detections['scores'], dim=0)
+                detections['labels'] = torch.cat(detections['labels'], dim=0)
+
+            else:
+                scores, labels = torch.max(cls_output)
+                filtered_output = self.filter_detections(
+                    boxes=bbox_output,
+                    scores=scores,
+                    labels=labels
+                )
+                detections['boxes'] = filtered_output[0]
+                detections['scores'] = filtered_output[1]
+                detections['labels'] = filtered_output[2]
+
+            all_detections.append(detections)
+
+        return all_detections
+
+    def filter_detections(self, boxes, scores, labels):
+        labels_is_fixed = isinstance(labels, int)
+
+        # Remove inds with low scores
+        inds_keep = scores >= self.score_thresh
+        boxes = boxes[inds_keep]
+        scores = scores[inds_keep]
+        if not labels_is_fixed:
+            labels = labels[inds_keep]
+
+        # Sort scores and keep only pre_nms_top_n
+        scores, order = torch.sort(scores)
+        order = order[:self.pre_nms_top_n]
+        boxes = boxes[order]
+        scores = scores[:self.pre_nms_top_n]
+        if not labels_is_fixed:
+            labels = labels[order]
+
+        if self.apply_nms:
+            # Apply nms
+            inds_keep = box_nms(boxes, scores, self.nms_thresh)
+            boxes = boxes[inds_keep]
+            scores = scores[inds_keep]
+            if not labels_is_fixed:
+                labels = labels[inds_keep]
+
+            # keep only post_nms_top_n
+            boxes = boxes[:self.post_nms_top_n]
+            scores = scores[:self.post_nms_top_n]
+            if not labels_is_fixed:
+                labels = labels[:self.post_nms_top_n]
+
+        if labels_is_fixed:
+            labels = torch.ones_like(scores) * labels
+
+        return boxes, scores, labels
