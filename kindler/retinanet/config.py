@@ -94,7 +94,7 @@ _C.TARGET.NUM_CLASSES = -1
 
 # Should there be a background class?
 # By setting background predictor to be True will also affect loss computation
-_C.TARGET.BACKGROUND_PREDICTOR = False
+_C.TARGET.BG_PREDICTOR = False
 
 # Should each class have it's own regression model?
 _C.TARGET.CLASS_SPECIFIC_BBOX = False
@@ -146,7 +146,7 @@ _C.OUTPUT.APPLY_NMS = True
 _C.OUTPUT.NMS_THRESH = 0.3
 
 # Threshold to determine if an area is background
-# Will only be used if BACKGROUND_PREDICTOR is used
+# Will only be used if BG_PREDICTOR is used
 _C.OUTPUT.BACKGROUND_THRESH = 0.7
 
 # Maximum number of detections to produce
