@@ -57,7 +57,7 @@ def get_extensions():
 
 
 setup(
-    name='kindler',
+    name='Kindler',
     version='0.1',
     author='mingrui',
     url='https://github.com/mingruimingrui/Kindler',
