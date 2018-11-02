@@ -142,15 +142,24 @@ _C.OUTPUT = ConfigSystem()
 # Apply nms on output? If not just returns raw output
 _C.OUTPUT.APPLY_NMS = True
 
+# Perform nms for each class
+_C.OUTPUT.CLASS_SPECIFIC_NMS = True
+
+# Maximum number of anchors to consider before nms
+_C.OUTPUT.PRE_NMS_TOP_N = 1000
+
+# Maximum number of detections to produce
+_C.OUTPUT.POST_NMS_TOP_N = 300
+
 # Threshold to filter detections for NMS
-_C.OUTPUT.NMS_THRESH = 0.3
+_C.OUTPUT.NMS_THRESH = 0.5
+
+# Threshold to filter detection scores
+_C.OUTPUT.SCORE_THRESH = 0.3
 
 # Threshold to determine if an area is background
 # Will only be used if BG_PREDICTOR is used
-_C.OUTPUT.BACKGROUND_THRESH = 0.7
-
-# Maximum number of detections to produce
-_C.OUTPUT.NUM_DETECTIONS = 300
+_C.OUTPUT.BG_THRESH = 0.7
 
 # ---------------------------------------------------------------------------- #
 # End of options
