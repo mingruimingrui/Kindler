@@ -15,6 +15,9 @@ from torch._six import string_classes, container_abcs
 
 logger = logging.getLogger(__name__)
 
+VGG_MEAN = [123.675, 116.28, 103.53]
+VGG_STD = [58.395, 57.12, 57.375]
+
 
 def check_image_is_numpy(image):
     assert isinstance(image, np.ndarray)
@@ -179,14 +182,13 @@ class ImageNormalization(object):
         All torchvision models are trained using VGG normalization
         There aren't any signs that things will change from this.
         """
-        self.mean = [123.675, 116.28, 103.53]
-        self.std = [58.395, 57.12, 57.375]
+        pass
 
     def __call__(self, item):
         check_image_is_numpy(item['image'])
-        item['image'][..., 0] = (item['image'][..., 0] - self.mean[0]) / self.std[0]
-        item['image'][..., 1] = (item['image'][..., 1] - self.mean[1]) / self.std[1]
-        item['image'][..., 2] = (item['image'][..., 2] - self.mean[2]) / self.std[2]
+        item['image'][..., 0] = (item['image'][..., 0] - VGG_MEAN[0]) / VGG_STD[0]
+        item['image'][..., 1] = (item['image'][..., 1] - VGG_MEAN[1]) / VGG_STD[1]
+        item['image'][..., 2] = (item['image'][..., 2] - VGG_MEAN[2]) / VGG_STD[2]
         return item
 
 
