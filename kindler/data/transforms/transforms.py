@@ -77,7 +77,7 @@ class ImageResize(object):
             self.max_size = max_size
             self.mode = 'flex'
 
-    def determine_size(self, image_shape):
+    def _determine_size(self, image_shape):
         orig_height, orig_width = image_shape[:2]
 
         if self.mode == 'fixed':
@@ -104,7 +104,7 @@ class ImageResize(object):
 
     def __call__(self, item):
         check_image_is_numpy(item['image'])
-        height, width, height_scale, width_scale = self.determine_size(item['image'].shape)
+        height, width, height_scale, width_scale = self._determine_size(item['image'].shape)
         item['image'] = cv2.resize(item['image'], (width, height))
 
         if 'annotations' in item:
@@ -178,17 +178,14 @@ class ImageNormalization(object):
         assert type == 'vgg'
 
         if type == 'vgg':
-            self.mean = [0.485, 0.456, 0.406]
-            self.std = [0.229, 0.224, 0.225]
+            self.mean = [123.675, 116.28, 103.53]
+            self.std = [58.395, 57.12, 57.375]
 
     def __call__(self, item):
         check_image_is_numpy(item['image'])
-
-        item['image'] = item['image'] / 255
         item['image'][..., 0] = (item['image'][..., 0] - self.mean[0]) / self.std[0]
         item['image'][..., 1] = (item['image'][..., 1] - self.mean[1]) / self.std[1]
         item['image'][..., 2] = (item['image'][..., 2] - self.mean[2]) / self.std[2]
-
         return item
 
 
@@ -197,11 +194,8 @@ class ToTensor(object):
     def __init__(self):
         pass
 
-    def __call__(self, item):
-        return self.to_tensor(item)
-
     @classmethod
-    def to_tensor(cls, obj):
+    def _to_tensor(cls, obj):
         pass
         if isinstance(obj, np.ndarray):
             return np.FloatTensor(obj)
@@ -213,3 +207,8 @@ class ToTensor(object):
             return [cls.to_tensor(e) for e in obj]
         else
             return obj
+
+    def __call__(self, item):
+        item = self._to_tensor(item)
+        item['image'] = item['image'].transpose(2, 0, 1) / 255
+        return item
