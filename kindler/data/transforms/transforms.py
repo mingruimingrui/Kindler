@@ -173,13 +173,14 @@ class RandomVerticalFlip(object):
 
 class ImageNormalization(object):
     """ Add Class helper """
-    def __init__(self, type='vgg'):
-        """ Add args helper """
-        assert type == 'vgg'
-
-        if type == 'vgg':
-            self.mean = [123.675, 116.28, 103.53]
-            self.std = [58.395, 57.12, 57.375]
+    def __init__(self):
+        """
+        There is no mean or std settings available
+        All torchvision models are trained using VGG normalization
+        There aren't any signs that things will change from this.
+        """
+        self.mean = [123.675, 116.28, 103.53]
+        self.std = [58.395, 57.12, 57.375]
 
     def __call__(self, item):
         check_image_is_numpy(item['image'])
