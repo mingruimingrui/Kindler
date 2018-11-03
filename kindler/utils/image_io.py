@@ -185,4 +185,4 @@ def get_image_size(file_path):
         else:
             raise UnknownImageFormat("Sorry, don't know how to get size for this file.")
 
-    return width, height
+    return height, width
