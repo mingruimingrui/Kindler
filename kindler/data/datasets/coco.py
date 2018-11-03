@@ -21,6 +21,11 @@ class CocoDataset(DetectionDataset):
         if mask:
             self._convert_segms_to_rles()
 
+    def __getitem__(self, idx):
+        item = super(CocoDataset, self).__getitem__(idx)
+        item['coco_idx'] = self.coco_ids[idx]
+        return item
+
     def _load_coco_data(self, mask):
         def coco_idx_to_image_file(idx):
             return self.coco.imgs[idx]['file_name']
@@ -49,13 +54,13 @@ class CocoDataset(DetectionDataset):
         self.coco_cat_to_contiguous = {coco_i:cont_i for cont_i, coco_i in enumerate(coco_cat_ids)}
         self.contiguous_to_coco_cat = {cont_i:coco_i for cont_i, coco_i in enumerate(coco_cat_ids)}
 
-        self.coco_idx = self.coco.getImgIds()
-        self.image_files = [coco_idx_to_image_file(idx) for idx in self.coco_idx]
-        image_sizes = [coco_ids_to_image_height_width(idx) for idx in self.coco_idx]
+        self.coco_ids = self.coco.getImgIds()
+        self.image_files = [coco_idx_to_image_file(idx) for idx in self.coco_ids]
+        image_sizes = [coco_ids_to_image_height_width(idx) for idx in self.coco_ids]
         self.image_heights, self.image_widths = zip(*image_sizes)
         self.image_heights = list(self.image_heights)
         self.image_widths = list(self.image_widths)
-        self.annotations = [coco_idx_to_annotations(idx) for idx in self.coco_idx]
+        self.annotations = [coco_idx_to_annotations(idx) for idx in self.coco_ids]
 
         if mask:
-            self.segms = [coco_idx_to_segms(idx) for idx in self.coco_idx]
+            self.segms = [coco_idx_to_segms(idx) for idx in self.coco_ids]

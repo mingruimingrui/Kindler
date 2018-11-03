@@ -75,6 +75,9 @@ class DetectionDataset(torch.utils.data.Dataset):
         if hasattr(self, 'keypoints'):
             item['keypoints'] = self.keypoints[idx]
 
+        # Assert all values float32
+        # Essentially also makes a copy of each value so original does not get
+        # editted
         for key, value in item.items():
             if key == 'idx':
                 continue
