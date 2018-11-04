@@ -53,6 +53,12 @@ def parse_args(args):
 
 
 def config_args(args):
+    """
+    Does a number of things
+    - Ensure that args are valid
+    - Create directory and files
+    - Set up logging
+    """
     if args.yaml_file is not None:
         with open(args.yaml_file, 'r') as f:
             yaml_configs = yaml.load(f)
@@ -80,7 +86,7 @@ def config_args(args):
 
 
 def main(args):
-    
+    model = 
 
 
 if __name__ == '__main__':
