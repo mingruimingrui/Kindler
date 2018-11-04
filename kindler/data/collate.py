@@ -22,7 +22,7 @@ class ImageCollate(object):
         self.mode = mode
         self.value = value
 
-    @static
+    @staticmethod
     def _check_image_is_tensor(image):
         assert isinstance(image, torch.Tensor)
         assert len(image.shape) == 3
@@ -30,8 +30,8 @@ class ImageCollate(object):
 
     def _determine_pad(self, max_shape, image_shape):
         if self.pad_method == 'center':
-            x_excess = max_shape[2] - item_shape[2]
-            y_excess = max_shape[1] - item_shape[1]
+            x_excess = max_shape[2] - image_shape[2]
+            y_excess = max_shape[1] - image_shape[1]
             x1_pad = int(x_excess / 2)
             y1_pad = int(y_excess / 2)
             x2_pad = x_excess - x1_pad
@@ -39,11 +39,11 @@ class ImageCollate(object):
         else:
             x1_pad = 0
             y1_pad = 0
-            x2_pad = max_shape[2] - item_shape[2]
-            y2_pad = max_shape[1] - item_shape[1]
+            x2_pad = max_shape[2] - image_shape[2]
+            y2_pad = max_shape[1] - image_shape[1]
         return x1_pad, x2_pad, y1_pad, y2_pad
 
-    def _pad_image(image, pad):
+    def _pad_image(self, image, pad):
         return torch.nn.functional.pad(
             image,
             pad=pad,
@@ -51,6 +51,7 @@ class ImageCollate(object):
             value=self.value
         )
 
+    @staticmethod
     def _pad_annotations(annotations, pad):
         annotations[:, 0] += pad[0]
         annotations[:, 1] += pad[2]
@@ -61,30 +62,31 @@ class ImageCollate(object):
     def __call__(self, raw_batch):
         all_shapes = [item['image'].shape for item in raw_batch]
         max_shape = [max(s[i] for s in all_shapes) for i in range(3)]
+        all_keys = raw_batch[0].keys()
 
-        collated_batch = {'image': []}
-        if 'annotations' in raw_batch[0]:
-            collated_batch['annotations'] = []
-        if 'masks' in raw_batch[0]:
-            collated_batch['masks'] = []
+        collated_batch = {k: [] for k in all_keys}
+        assert 'image' in collated_batch
 
         for raw_item, item_shape in zip(raw_batch, all_shapes):
             self._check_image_is_tensor(raw_item['image'])
             pad = self._determine_pad(max_shape, item_shape)
 
-            image = self._pad_image(raw_item['image'], pad)
-            collated_batch['image'].append(image)
+            for k, v in raw_item.items():
+                if k == 'image':
+                    image = self._pad_image(v, pad)
+                    collated_batch['image'].append(image)
 
-            if 'annotations' in raw_item:
-                annotations = self._pad_annotations(raw_item['annotations'], pad)
-                collated_batch['annotations'].append(annotations)
+                elif k == 'annotations':
+                    annotations = self._pad_annotations(v, pad)
+                    collated_batch['annotations'].append(annotations)
 
-            if 'masks' in raw_item:
-                masks = self._pad_image(raw_item['masks'], pad)
-                collated_batch['masks'].append(masks)
+                elif k == 'masks':
+                    masks = self._pad_image(v, pad)
+                    collated_batch['masks'].append(masks)
+
+                else:
+                    collated_batch[k].append(v)
 
         collated_batch['image'] = torch.stack(collated_batch['image'], dim=0)
-        if 'masks' in collated_batch:
-            collated_batch['masks'] = torch.stack(collated_batch['masks'], dim=0)
 
         return collated_batch
