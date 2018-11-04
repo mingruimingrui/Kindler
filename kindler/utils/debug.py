@@ -46,7 +46,6 @@ def visualize_batch(batch):
 
         if 'masks' in batch:
             anns = tensor_to_np(batch['annotations'][i])
-            print(anns)
             ann_cls = anns[:, 4].astype(int)
             masks = tensor_to_np(batch['masks'][i])
             for cls, mask in zip(ann_cls, masks):
