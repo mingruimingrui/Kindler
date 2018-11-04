@@ -16,6 +16,9 @@ class CocoDataset(DetectionDataset):
         self.coco = COCO(ann_file)
         self.root_dir = root_image_dir
 
+        if transforms is not None:
+            self.transforms = transforms
+
         self._load_coco_data(mask)
         self._check_inputs()
         if mask:

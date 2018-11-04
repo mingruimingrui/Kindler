@@ -11,6 +11,7 @@ import logging
 import cv2
 import numpy as np
 
+import torch
 from torch._six import string_classes, container_abcs
 
 logger = logging.getLogger(__name__)
@@ -111,13 +112,18 @@ class ImageResize(object):
         item['image'] = cv2.resize(item['image'], (width, height))
 
         if 'annotations' in item:
-            item['annotations'][:, 0::2] *= width_scale
-            item['annotations'][:, 1::2] *= height_scale
+            item['annotations'][:, 0] *= width_scale
+            item['annotations'][:, 1] *= height_scale
+            item['annotations'][:, 2] *= width_scale
+            item['annotations'][:, 3] *= height_scale
 
         if 'masks' in item:
             masks = []
             for mask in item['masks']:
-                mask = cv2.resize(mask, (width, height))
+                mask_height, mask_width = mask.shape[:2]
+                mask_height = round(mask_height * height_scale)
+                mask_width = round(mask_width * width_scale)
+                mask = cv2.resize(mask, (mask_width, mask_height))
                 masks.append(mask)
             item['masks'] = np.array(masks)
 
@@ -199,19 +205,18 @@ class ToTensor(object):
 
     @classmethod
     def _to_tensor(cls, obj):
-        pass
         if isinstance(obj, np.ndarray):
-            return np.FloatTensor(obj)
+            return torch.from_numpy(obj.copy())
         elif isinstance(obj, string_classes):
             return obj
         elif isinstance(obj, container_abcs.Mapping):
-            return {k: cls.to_tensor(v) for k, v in obj.items()}
+            return {k: cls._to_tensor(v) for k, v in obj.items()}
         elif isinstance(obj, container_abcs.Sequence):
-            return [cls.to_tensor(e) for e in obj]
-        else
+            return [cls._to_tensor(e) for e in obj]
+        else:
             return obj
 
     def __call__(self, item):
-        item = self._to_tensor(item)
         item['image'] = item['image'].transpose(2, 0, 1) / 255
+        item = self._to_tensor(item)
         return item
