@@ -23,6 +23,7 @@ class SmoothL1Loss(torch.nn.Module):
         'elementwise_mean' gets the average of every element
     """
     def __init__(self, beta=1, reduction='elementwise_mean'):
+        super(SmoothL1Loss, self).__init__()
         assert reduction in {'none', 'sum', 'elementwise_mean'}, \
             "reduction must have a value in ['none', 'sum', 'elementwise_mean']"
 

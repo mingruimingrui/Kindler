@@ -190,5 +190,8 @@ def validate_config(config):
     assert 0.0 <= config.OUTPUT.NMS_THRESH <= 1.0, \
         'Value of NMS_THRESH is invalid'
 
-    assert 0.0 <= config.OUTPUT.BACKGROUND_THRESH <= 1.0, \
+    assert 0.0 <= config.OUTPUT.SCORE_THRESH <= 1.0, \
+        'Value of SCORE_THRESH is invalid'
+
+    assert 0.0 <= config.OUTPUT.BG_THRESH <= 1.0, \
         'Value of BACKGROUND_THRESH is invalid'
