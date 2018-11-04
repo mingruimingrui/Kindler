@@ -4,7 +4,7 @@ root_img_dirs: '/mnt/hdd1/datasets/coco/images/train2017'
 
 batch_size: 1
 max_iter: 1440000
-lr: 0.001
+base_lr: 0.001
 
 log_dir: '/mnt/hdd1/jobs/kindler_retinanet'
 checkpoint_dir: '/mnt/hdd1/jobs/kindler_retinanet/checkpoints'
