@@ -4,7 +4,7 @@ import torch
 class ImageCollate(object):
     """
     Image datasets in kindler.data.datasets will output dictionary type items
-    We need a collate function to instruct the dataloader on how to colalte
+    We need a collate function to instruct the data loader on how to colalte
     batches of image dicts
     """
     def __init__(self, pad_method='top-left', mode='constant', value=0):
