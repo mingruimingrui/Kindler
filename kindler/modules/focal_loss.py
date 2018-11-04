@@ -20,7 +20,6 @@ class FocalLoss(torch.nn.Module):
         self.reduction = reduction
 
     def forward(self, output, target):
-        # Orig implementation
         bce = torch.nn.functional.binary_cross_entropy(output, target, reduction='none')
 
         alpha_factor = target.clone()
