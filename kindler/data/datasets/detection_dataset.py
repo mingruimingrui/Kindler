@@ -88,6 +88,9 @@ class DetectionDataset(torch.utils.data.Dataset):
 
         return item
 
+    def get_item_num_annotations(self, idx):
+        return len(self.annotations[idx])
+
     def get_item_aspect_ratio(self, idx):
         self._auto_fill_image_heights_widths()
         return self.image_heights[idx] / self.image_widths[idx]
