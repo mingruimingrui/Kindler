@@ -1,5 +1,3 @@
-import re
-
 import torch
 import torchvision
 
