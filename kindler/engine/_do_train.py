@@ -43,6 +43,9 @@ def reduce_loss_dict(loss_dict):
 
 
 def save_model(checkpoint_dir, iter, model, optimizer, scheduler=None):
+    if not is_main_process():
+        return
+
     data = {
         'model': model.state_dict(),
         'optimizer': optimizer.state_dict()
