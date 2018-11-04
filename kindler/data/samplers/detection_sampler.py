@@ -3,6 +3,7 @@ from __future__ import division
 
 import math
 import random
+import numpy as np
 
 import torch
 import torch.utils.data
@@ -84,8 +85,8 @@ class DetectionSampler(torch.utils.data.sampler.BatchSampler):
         else:
             return self.num_iter
 
-    @staticmethod
-    def _get_aspect_ratios(dataset):
+    @classmethod
+    def _get_aspect_ratios(cls, dataset):
         is_concat_dataset = isinstance(dataset, ConcatDataset)
         dataset_size = len(dataset)
         if is_concat_dataset:
@@ -93,14 +94,14 @@ class DetectionSampler(torch.utils.data.sampler.BatchSampler):
             # Gather all into a list
             all_aspect_ratios = []
             for d in dataset.datasets:
-                all_aspect_ratios += self._get_aspect_ratios(d)
+                all_aspect_ratios += cls._get_aspect_ratios(d)
         else:
             # Get list of aspect ratios if DetectoinDataset
             all_aspect_ratios = [dataset.get_item_aspect_ratio(i) for i in range(dataset_size)]
         return all_aspect_ratios
 
-    @staticmethod
-    def _get_size_anns(dataset):
+    @classmethod
+    def _get_size_anns(cls, dataset):
         is_concat_dataset = isinstance(dataset, ConcatDataset)
         dataset_size = len(dataset)
         if is_concat_dataset:
@@ -108,7 +109,7 @@ class DetectionSampler(torch.utils.data.sampler.BatchSampler):
             # Gather all into a list
             all_size_anns = []
             for d in dataset.datasets:
-                all_size_anns += self._get_size_anns(d)
+                all_size_anns += cls._get_size_anns(d)
         else:
             # Get list of size of anns if DetectoinDataset
             all_size_anns = [dataset.get_item_num_annotations(i) for i in range(dataset_size)]
@@ -119,7 +120,7 @@ class DetectionSampler(torch.utils.data.sampler.BatchSampler):
         keep_idx = []
         keep_aspect_ratios = []
 
-        for size, idx, aspect_ratio in (all_size_anns, all_idx, all_aspect_ratios):
+        for size, idx, aspect_ratio in zip(all_size_anns, all_idx, all_aspect_ratios):
             if size > 0:
                 keep_idx.append(idx)
                 keep_aspect_ratios.append(aspect_ratio)
@@ -166,6 +167,6 @@ class DetectionSampler(torch.utils.data.sampler.BatchSampler):
                 random.shuffle(groups)
 
             if self.num_iter is not None:
-                groups = groups[:num_iter]
+                groups = groups[:self.num_iter]
 
         return groups
