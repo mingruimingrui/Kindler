@@ -1,0 +1,10 @@
+model_config_file: './configs/retinanet_config.yaml'
+ann_files: '/mnt/hdd1/datasets/coco/annotations/instances_train2017.json'
+root_img_dirs: '/mnt/hdd1/datasets/coco/images/train2017'
+
+batch_size: 1
+max_iter: 1440000
+lr: 0.001
+
+log_dir: '/mnt/hdd1/jobs/kindler_retinanet'
+checkpoint_dir: '/mnt/hdd1/jobs/kindler_retinanet/checkpoints'
