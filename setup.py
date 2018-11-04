@@ -18,6 +18,13 @@ requirements = [
     'requests'
 ]
 
+exclude_dirs = [
+    'configs',
+    'tests',
+    'tools',
+    'dep'
+]
+
 
 def get_extensions():
     this_dir = os.path.dirname(os.path.abspath(__file__))
@@ -65,7 +72,7 @@ setup(
     author='mingrui',
     url='https://github.com/mingruimingrui/Kindler',
     description='model zoo in pytorch',
-    packages=find_packages(exclude=('configs', 'tests')),
+    packages=find_packages(exclude=exclude_dirs),
     ext_modules=get_extensions(),
     cmdclass={'build_ext': BuildExtension}
 )
