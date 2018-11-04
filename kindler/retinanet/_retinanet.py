@@ -205,8 +205,8 @@ class CombinedHead(torch.nn.Module):
         batch_size = x.shape[0]
         x = self.head(x)
 
-        classification = x[:, :self.split_point].permute(0, 2, 3, 1).reshape(x.shape[0], -1, self.total_num_classes)
-        regression = x[:, self.split_point:].permute(0, 2, 3, 1).reshape(x.shape[0], -1, self.total_num_bbox)
+        classification = x[:, :self.split_point].permute(0, 2, 3, 1).reshape(batch_size, -1, self.total_num_classes)
+        regression = x[:, self.split_point:].permute(0, 2, 3, 1).reshape(batch_size, -1, self.total_num_bbox)
 
         return self.sigmoid(classification), regression
 
@@ -364,7 +364,12 @@ class ComputeLosses(torch.nn.Module):
         reg_target,
         anchor_states
     ):
-        loss_dict = {}
+        # Remove non positive anchors
+        reg_output = reg_output[anchor_states == 1]
+        reg_target = reg_target[anchor_states == 1]
+
+        # Compute reg loss
+        reg_loss = self.reg_loss_fn(reg_output, reg_target)
 
         if self.use_bg_predictor:
             # Get background output and targets
@@ -381,9 +386,17 @@ class ComputeLosses(torch.nn.Module):
             cls_target = cls_target[anchor_states == 1]
 
             # Calculate background and classification loss
-            loss_dict['bg_loss'] = self.cls_loss_fn(bg_output, bg_target)
-            loss_dict['cls_loss'] = self.cls_loss_fn(cls_output, cls_target)
-            loss_dict['total_loss'] = loss_dict['bg_loss'] + loss_dict['cls_loss']
+            bg_loss = self.cls_loss_fn(bg_output, bg_target)
+            cls_loss = self.cls_loss_fn(cls_output, cls_target)
+
+            # Compute total loss and gather
+            total_loss = bg_loss + cls_loss + reg_loss
+            loss_dict = {
+                'bg_loss': bg_loss,
+                'cls_loss': cls_loss,
+                'reg_loss': reg_loss,
+                'total_loss': total_loss
+            }
 
         else:
             # Remove ignore anchors
@@ -391,16 +404,15 @@ class ComputeLosses(torch.nn.Module):
             cls_target = cls_target[anchor_states != -1]
 
             # Calculate classification loss
-            loss_dict['cls_loss'] = self.cls_loss_fn(cls_output, cls_target)
-            loss_dict['total_loss'] = loss_dict['cls_loss']
+            cls_loss = self.cls_loss_fn(cls_output, cls_target)
 
-        # Remove non positive anchors
-        reg_output = reg_output[anchor_states != 1]
-        reg_target = reg_target[anchor_states != 1]
-
-        # Compute loss
-        loss_dict['reg_loss'] = self.reg_loss_fn(reg_output, reg_target)
-        loss_dict['total_loss'] += loss_dict['reg_loss']
+            # Compute total loss and gather
+            total_loss = cls_loss + reg_loss
+            loss_dict = {
+                'cls_loss': cls_loss,
+                'reg_loss': reg_loss,
+                'total_loss': total_loss
+            }
 
         return loss_dict
 
