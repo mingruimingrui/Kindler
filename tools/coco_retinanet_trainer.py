@@ -146,7 +146,8 @@ def make_data_loader(args):
         coco_dataset,
         collate_fn=image_collate,
         batch_sampler=batch_sampler,
-        num_workers=args.batch_size
+        num_workers=args.batch_size * 2,
+        # pin_memory=True
     )
 
 
