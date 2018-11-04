@@ -8,7 +8,7 @@ from torch._six import string_classes, container_abcs
 def to_device(obj, device):
     """ Deep transfer an object over to a device """
     if isinstance(obj, torch.Tensor):
-        return torch.to(device)
+        return obj.to(device)
     elif isinstance(obj, string_classes):
         return obj
     elif isinstance(obj, container_abcs.Mapping):
