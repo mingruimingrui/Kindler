@@ -364,30 +364,43 @@ class ComputeLosses(torch.nn.Module):
         reg_target,
         anchor_states
     ):
+        pos_anchors = anchor_states == 1
+        non_neg_anchors = anchor_states != 1
+
+        num_pos_anchors = torch.sum(pos_anchors)
+        num_non_neg_anchors = torch.sum(non_neg_anchors)
+        no_pos_anchors = num_pos_anchors == 0
+
         # Remove non positive anchors
-        reg_output = reg_output[anchor_states == 1]
-        reg_target = reg_target[anchor_states == 1]
+        reg_output = reg_output[pos_anchors]
+        reg_target = reg_target[pos_anchors]
 
         # Compute reg loss
-        reg_loss = self.reg_loss_fn(reg_output, reg_target)
+        if no_pos_anchors:
+            reg_loss = 0
+        else:
+            reg_loss = self.reg_loss_fn(reg_output, reg_target)
 
         if self.use_bg_predictor:
             # Get background output and targets
             bg_output = cls_output[..., -1]
-            bg_target = anchor_states == 0
+            bg_target = 1 - anchor_states
 
             # Remove ignore anchors
-            bg_output = bg_output[anchor_states != -1]
-            bg_target = bg_target[anchor_states != -1]
+            bg_output = bg_output[non_neg_anchors]
+            bg_target = bg_target[non_neg_anchors]
 
             # Remove non positive anchors for classification loss
             cls_output = cls_output[..., :-1]
-            cls_output = cls_output[anchor_states == 1]
-            cls_target = cls_target[anchor_states == 1]
+            cls_output = cls_output[pos_anchors]
+            cls_target = cls_target[pos_anchors]
 
             # Calculate background and classification loss
             bg_loss = self.cls_loss_fn(bg_output, bg_target)
-            cls_loss = self.cls_loss_fn(cls_output, cls_target)
+            if no_pos_anchors:
+                cls_loss = 0
+            else:
+                cls_loss = self.cls_loss_fn(cls_output, cls_target)
 
             # Compute total loss and gather
             total_loss = bg_loss + cls_loss + reg_loss
@@ -400,11 +413,12 @@ class ComputeLosses(torch.nn.Module):
 
         else:
             # Remove ignore anchors
-            cls_output = cls_output[anchor_states != -1]
-            cls_target = cls_target[anchor_states != -1]
+            cls_output = cls_output[non_neg_anchors]
+            cls_target = cls_target[non_neg_anchors]
 
             # Calculate classification loss
             cls_loss = self.cls_loss_fn(cls_output, cls_target)
+            cls_loss = cls_loss * num_non_neg_anchors * num_pos_anchors.clamp(min=10)
 
             # Compute total loss and gather
             total_loss = cls_loss + reg_loss
