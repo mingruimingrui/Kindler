@@ -10,7 +10,6 @@ import os
 import tqdm
 
 import numpy as np
-import cv2
 
 import torch
 import torch.utils.data
