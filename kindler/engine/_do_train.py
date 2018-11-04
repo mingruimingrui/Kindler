@@ -105,15 +105,14 @@ def do_train(
         # Comute gather and reduce loss
         loss_dict_reduced = reduce_loss_dict(loss_dict)
         meters.update(**loss_dict_reduced)
-        reduce_time = time.time() - t0
 
         optimizer.zero_grad()
         loss_dict['total_loss'].backward()
         optimizer.step()
 
         batch_time = time.time() - t0
-        meters.update(batch_time=batch_time, data_time=data_time, reduce_time=reduce_time)
         t0 = time.time()
+        meters.update(batch_time=batch_time, data_time=data_time)
 
         eta_seconds = meters.batch_time.global_avg * (max_iter - iter)
         eta_string = str(datetime.timedelta(seconds=int(eta_seconds)))
@@ -126,7 +125,8 @@ def do_train(
                 'eta': eta_string,
                 'iter': iter,
                 'lr': '{:.6f}'.format(optimizer.param_groups[0]["lr"]),
-                'max mem': '{:.0f}'.format(torch.cuda.max_memory_allocated() / 1024.0 / 1024.0)
+                'max mem': '{:.0f}'.format(torch.cuda.max_memory_allocated() / 1024.0 / 1024.0),
+                'meters': str(meters)
             }
             logger.info('{}'.format(msg))
 
