@@ -2,12 +2,12 @@ from __future__ import absolute_import
 from __future__ import division
 
 import os
-import json
 import logging
 
 import time
 import datetime
 
+import torch
 from torch import distributed as dist
 
 from ..utils.metric_logger import MetricLogger
@@ -115,7 +115,7 @@ def do_train(
         meters.update(batch_time=batch_time, data_time=data_time, reduce_time=reduce_time)
         t0 = time.time()
 
-        eta_seconds = meters.batch_time.global_avg / iter * (max_iter - iter)
+        eta_seconds = meters.batch_time.global_avg * (max_iter - iter)
         eta_string = str(datetime.timedelta(seconds=int(eta_seconds)))
 
         if iter % checkpoint_period == 0 and iter > 0:
