@@ -39,9 +39,15 @@ class ClassificationHead(torch.nn.Module):
         """
         super(ClassificationHead, self).__init__()
 
-        self.total_num_classes = num_classes
+        self.use_bg_predictor = use_bg_predictor
+
+        self.num_classes = num_classes
+        total_num_classes = num_classes
         if use_bg_predictor:
-            self.total_num_classes += 1
+            total_num_classes += 1
+
+        if use_bg_predictor:
+            self.bg_split_point = num_anchors * num_classes
 
         # Add conv head
         head = []
@@ -56,7 +62,7 @@ class ClassificationHead(torch.nn.Module):
         # Add classifier layer
         head.append(torch.nn.Conv2d(
             input_feature_size if num_layers == 0 else feature_size,
-            self.total_num_classes * num_anchors,
+            total_num_classes * num_anchors,
             **conv_1x1_kwargs
         ))
         head.append(torch.nn.Sigmoid())
@@ -64,16 +70,34 @@ class ClassificationHead(torch.nn.Module):
         # Initialize classification output to prior_prob
         # kernel ~ 0.0
         # bias   ~ -log((1 - prior_prob) / prior_prob)  So that output is prior_prob after sigmoid
-        kernel = head[-2].weight
-        bias = head[-2].bias
-        kernel.data.fill_(0.0)
-        bias.data.fill_(-math.log((1 - prior_prob) / prior_prob))
+        if use_bg_predictor:
+            cls_kernel = head[-2].weight[:self.bg_split_point]
+            cls_bias = head[-2].bias[:self.bg_split_point]
+            cls_kernel.data.fill_(0.0)
+            cls_bias.data.fill_(-math.log((1 - prior_prob) / prior_prob))
+
+            bg_kernel = head[-2].weight[self.bg_split_point:]
+            bg_bias = head[-2].bias[self.bg_split_point:]
+            bg_kernel.data.fill_(0.0)
+            bg_bias.data.fill_(-math.log(prior_prob / (1 - prior_prob)))
+        else:
+            kernel = head[-2].weight
+            bias = head[-2].bias
+            kernel.data.fill_(0.0)
+            bias.data.fill_(-math.log((1 - prior_prob) / prior_prob))
 
         self.head = torch.nn.Sequential(*head)
 
     def forward(self, x):
         x = self.head(x)
-        return x.permute(0, 2, 3, 1).reshape(x.shape[0], -1, self.total_num_classes)
+
+        if self.use_bg_predictor:
+            classification = x[:, :self.bg_split_point].permute(0, 2, 3, 1).reshape(batch_size, -1, self.num_classes)
+            background = x[:, self.bg_split_point:].permute(0, 2, 3, 1).reshape(batch_size, -1, 1)
+            return torch.cat([classification, background], dim=2)
+        else:
+            return x.permute(0, 2, 3, 1).reshape(x.shape[0], -1, self.num_classes)
+
 
 
 class RegressionHead(torch.nn.Module):
@@ -160,16 +184,22 @@ class CombinedHead(torch.nn.Module):
         """
         super(CombinedHead, self).__init__()
 
-        self.total_num_classes = num_classes
+        self.use_bg_predictor = use_bg_predictor
+
+        self.num_classes = num_classes
+        total_num_classes = num_classes
         if use_bg_predictor:
-            self.total_num_classes += 1
+            total_num_classes += 1
 
         self.total_num_bbox = 4
         if use_class_specific_bbox:
             assert num_classes is not None
             self.total_num_bbox *= num_classes
 
-        self.split_point = num_anchors * self.total_num_classes
+        self.split_point = num_anchors * num_classes
+        if use_bg_predictor:
+            self.bg_split_point = num_anchors * num_classes
+            self.split_point = num_anchors * total_num_classes
 
         # Add conv head
         head = []
@@ -184,19 +214,28 @@ class CombinedHead(torch.nn.Module):
         # Add combined layer
         head.append(torch.nn.Conv2d(
             input_feature_size if num_layers == 0 else feature_size,
-            num_anchors * (self.total_num_classes + self.total_num_bbox),
+            num_anchors * (total_num_classes + self.total_num_bbox),
             **conv_1x1_kwargs
         ))
 
         # Initialize classification output to prior_prob
         # kernel ~ 0.0
         # bias   ~ -log((1 - prior_prob) / prior_prob)  So that output is prior_prob after sigmoid
-        kernel = head[-1].weight[:self.split_point]
-        bias = head[-1].bias[:self.split_point]
-        # kernel = head[-1].weight
-        # bias = head[-1].bias
-        kernel.data.fill_(0.0)
-        bias.data.fill_(-math.log((1 - prior_prob) / prior_prob))
+        if use_bg_predictor:
+            cls_kernel = head[-1].weight[:self.bg_split_point]
+            cls_bias = head[-1].bias[:self.bg_split_point]
+            cls_kernel.data.fill_(0.0)
+            cls_bias.data.fill_(-math.log((1 - prior_prob) / prior_prob))
+
+            bg_kernel = head[-1].weight[self.bg_split_point:self.split_point]
+            bg_bias = head[-1].bias[self.bg_split_point:self.split_point]
+            bg_kernel.data.fill_(0.0)
+            bg_bias.data.fill_(-math.log(prior_prob / (1 - prior_prob)))
+        else:
+            kernel = head[-1].weight[:self.split_point]
+            bias = head[-1].bias[:self.split_point]
+            kernel.data.fill_(0.0)
+            bias.data.fill_(-math.log((1 - prior_prob) / prior_prob))
 
         self.head = torch.nn.Sequential(*head)
         self.sigmoid = torch.nn.Sigmoid()
@@ -205,7 +244,13 @@ class CombinedHead(torch.nn.Module):
         batch_size = x.shape[0]
         x = self.head(x)
 
-        classification = x[:, :self.split_point].permute(0, 2, 3, 1).reshape(batch_size, -1, self.total_num_classes)
+        if self.use_bg_predictor:
+            classification = x[:, :self.bg_split_point].permute(0, 2, 3, 1).reshape(batch_size, -1, self.num_classes)
+            background = x[:, self.bg_split_point:self.split_point].permute(0, 2, 3, 1).reshape(batch_size, -1, 1)
+            classification = torch.cat([classification, background], dim=2)
+        else:
+            classification = x[:, :self.split_point].permute(0, 2, 3, 1).reshape(batch_size, -1, self.num_classes)
+
         regression = x[:, self.split_point:].permute(0, 2, 3, 1).reshape(batch_size, -1, self.total_num_bbox)
 
         return self.sigmoid(classification), regression
@@ -350,9 +395,9 @@ class ComputeLosses(torch.nn.Module):
         self.use_bg_predictor = use_bg_predictor
 
         if use_focal_loss:
-            self.cls_loss_fn = FocalLoss(alpha=focal_alpha, gamma=focal_gamma)
+            self.cls_loss_fn = FocalLoss(alpha=focal_alpha, gamma=focal_gamma, reduction='sum')
         else:
-            self.cls_loss_fn = torch.nn.BCELoss()
+            self.cls_loss_fn = torch.nn.BCELoss(reduction='sum')
 
         self.reg_loss_fn = SmoothL1Loss(beta=reg_beta)
 
@@ -365,10 +410,10 @@ class ComputeLosses(torch.nn.Module):
         anchor_states
     ):
         pos_anchors = anchor_states == 1
-        non_neg_anchors = anchor_states != 1
+        non_neg_anchors = anchor_states != -1
 
         num_pos_anchors = torch.sum(pos_anchors)
-        num_non_neg_anchors = torch.sum(non_neg_anchors)
+        # num_non_neg_anchors = torch.sum(non_neg_anchors)
         no_pos_anchors = num_pos_anchors == 0
 
         # Remove non positive anchors
@@ -377,7 +422,8 @@ class ComputeLosses(torch.nn.Module):
 
         # Compute reg loss
         if no_pos_anchors:
-            reg_loss = 0
+            # Use a hack to create a zero loss
+            reg_loss = torch.zeros_like(num_pos_anchors).float()
         else:
             reg_loss = self.reg_loss_fn(reg_output, reg_target)
 
@@ -396,11 +442,11 @@ class ComputeLosses(torch.nn.Module):
             cls_target = cls_target[pos_anchors]
 
             # Calculate background and classification loss
-            bg_loss = self.cls_loss_fn(bg_output, bg_target)
+            bg_loss = self.cls_loss_fn(bg_output, bg_target) / num_pos_anchors.clamp(min=10)
             if no_pos_anchors:
-                cls_loss = 0
+                cls_loss = torch.zeros_like(reg_loss)
             else:
-                cls_loss = self.cls_loss_fn(cls_output, cls_target)
+                cls_loss = self.cls_loss_fn(cls_output, cls_target) / num_pos_anchors
 
             # Compute total loss and gather
             total_loss = bg_loss + cls_loss + reg_loss
@@ -417,8 +463,7 @@ class ComputeLosses(torch.nn.Module):
             cls_target = cls_target[non_neg_anchors]
 
             # Calculate classification loss
-            cls_loss = self.cls_loss_fn(cls_output, cls_target)
-            cls_loss = cls_loss * num_non_neg_anchors * num_pos_anchors.clamp(min=10)
+            cls_loss = self.cls_loss_fn(cls_output, cls_target) / num_pos_anchors.clamp(min=10)
 
             # Compute total loss and gather
             total_loss = cls_loss + reg_loss
