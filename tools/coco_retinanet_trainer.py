@@ -59,6 +59,8 @@ def parse_args(args):
         help='Maximum number of iterations to perform during training')
     parser.add_argument('--base-lr', type=float, default=0.001,
         help='Learning rate to use during training')
+    parser.add_argument('--warmup-iters', type=int, default=8000,
+        help='Number of iterations for SGD warm up')
 
     parser.add_argument('--log-dir', type=str, default='./',
         help='Directory to store log files')
@@ -112,7 +114,7 @@ def make_lr_scheduler(optimizer, args):
     return WarmupMultiStepLR(
         optimizer,
         milestones=milestones,
-        warmup_iters=int(8000 / args.batch_size)
+        warmup_iters=args.warmup_iters
     )
 
 
