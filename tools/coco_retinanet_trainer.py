@@ -119,7 +119,7 @@ def make_lr_scheduler(optimizer, args):
 def make_data_loader(args):
     image_transforms = transforms.Compose([
         # transforms.ImageResize(min_size=800, max_size=1333),
-        transforms.ImageResize(min_size=400, max_size=666),
+        transforms.ImageResize(min_size=800, max_size=1333),
         transforms.RandomHorizontalFlip(),
         transforms.ImageNormalization(),
         transforms.ToTensor()
