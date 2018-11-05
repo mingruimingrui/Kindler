@@ -8,7 +8,7 @@ import time
 import datetime
 
 import torch
-from torch import distributed as dist
+from torch.distributed import deprecated as dist
 
 from ..utils.metric_logger import MetricLogger
 from ..utils.misc import to_device
@@ -29,9 +29,10 @@ def reduce_loss_dict(loss_dict):
     with torch.no_grad():
         loss_names = []
         all_losses = []
-        for k, v in loss_dict.items():
+        keys = sorted(loss_dict.keys())
+        for k in keys:
             loss_names.append(k)
-            all_losses.append(v)
+            all_losses.append(loss_dict[k])
         all_losses = torch.stack(all_losses, dim=0)
         dist.reduce(all_losses, dst=0)
         if is_main_process():
