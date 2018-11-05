@@ -118,7 +118,8 @@ def make_lr_scheduler(optimizer, args):
 
 def make_data_loader(args):
     image_transforms = transforms.Compose([
-        transforms.ImageResize(min_size=800, max_size=1333),
+        # transforms.ImageResize(min_size=800, max_size=1333),
+        transforms.ImageResize(min_size=400, max_size=666),
         transforms.RandomHorizontalFlip(),
         transforms.ImageNormalization(),
         transforms.ToTensor()
@@ -163,13 +164,14 @@ def main(args):
     num_gpus = int(os.environ["WORLD_SIZE"]) if "WORLD_SIZE" in os.environ else 1
     distributed = num_gpus > 1
     if distributed:
-        torch.distributed.init_process_group(
+        torch.distributed.deprecated.init_process_group(
             backend='nccl',
             init_method='env://'
         )
 
     # Make model
     model = RetinaNet(config_file=args.model_config_file).cuda()
+    model_config = model.config
     assert model.config.TARGET.NUM_CLASSES == 80, \
         'Requires RetinaNet config file to define num_classes as 80'
 
@@ -179,7 +181,7 @@ def main(args):
 
     # Make model distributed
     if distributed:
-        model = torch.nn.parallel.DistributedDataParallel(
+        model = torch.nn.parallel.deprecated.DistributedDataParallel(
             model,
             device_ids=[args.local_rank],
             output_device=args.local_rank,
@@ -203,7 +205,7 @@ def main(args):
     ))
 
     logger.info('Model config: {}\n'.format(
-        json.dumps(dict(model.config), indent=2)
+        json.dumps(dict(model_config), indent=2)
     ))
 
     do_train(
