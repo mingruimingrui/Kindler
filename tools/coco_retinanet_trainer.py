@@ -62,6 +62,11 @@ def parse_args(args):
     parser.add_argument('--warmup-iters', type=int, default=8000,
         help='Number of iterations for SGD warm up')
 
+    parser.add_argument('--min-image-size', type=int, default=800,
+        help='Minimum image resized size')
+    parser.add_argument('--max-image-size', type=int, default=1333,
+        help='Maximum image resized size')
+
     parser.add_argument('--log-dir', type=str, default='./',
         help='Directory to store log files')
     parser.add_argument('--checkpoint-dir', type=str, default='./',
@@ -121,7 +126,7 @@ def make_lr_scheduler(optimizer, args):
 def make_data_loader(args):
     image_transforms = transforms.Compose([
         # transforms.ImageResize(min_size=800, max_size=1333),
-        transforms.ImageResize(min_size=800, max_size=1333),
+        transforms.ImageResize(min_size=args.min_image_size, max_size=args.max_image_size),
         transforms.RandomHorizontalFlip(),
         transforms.ImageNormalization(),
         transforms.ToTensor()
