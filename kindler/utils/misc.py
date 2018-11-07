@@ -5,10 +5,10 @@ import torch
 from torch._six import string_classes, container_abcs
 
 
-def to_device(obj, device):
+def to_device(obj, device, non_blocking=False):
     """ Deep transfer an object over to a device """
     if isinstance(obj, torch.Tensor):
-        return obj.to(device)
+        return obj.to(device, non_blocking=non_blocking)
     elif isinstance(obj, string_classes):
         return obj
     elif isinstance(obj, container_abcs.Mapping):
