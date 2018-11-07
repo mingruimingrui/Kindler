@@ -16,6 +16,8 @@ from ..utils.comm import get_world_size, is_main_process
 
 logger = logging.getLogger(__name__)
 
+maximum_allowable_cache = 8 * 1024 ** 3
+
 
 def reduce_loss_dict(loss_dict):
     """
@@ -94,8 +96,7 @@ def do_train(
 
     t0 = time.time()
     for iter, batch in enumerate(data_loader):
-        if device is not None:
-            batch = to_device(batch, device)
+        batch = to_device(batch, device, non_blocking=True)
         data_time = time.time() - t0
 
         if scheduler is not None:
@@ -115,13 +116,16 @@ def do_train(
         t0 = time.time()
         meters.update(batch_time=batch_time, data_time=data_time)
 
-        eta_seconds = meters.batch_time.global_avg * (max_iter - iter)
-        eta_string = str(datetime.timedelta(seconds=int(eta_seconds)))
+        # Clear cache
+        if torch.cuda.memory_cached() > maximum_allowable_cache:
+            torch.cuda.empty_cache()
 
         if iter % checkpoint_period == 0 and iter > 0:
             save_model(checkpoint_dir, iter, model, optimizer, scheduler)
 
         if iter % logging_period == 0 or iter == (max_iter - 1):
+            eta_seconds = meters.batch_time.global_avg * (max_iter - iter)
+            eta_string = str(datetime.timedelta(seconds=int(eta_seconds)))
             msg = {
                 'eta': eta_string,
                 'iter': iter,
