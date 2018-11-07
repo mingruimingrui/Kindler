@@ -509,6 +509,7 @@ class FilterDetections(torch.nn.Module):
             detections = {'boxes': [], 'scores': [], 'labels': []}
 
             if self.use_bg_predictor:
+                num_classes -= 1
                 inds_keep = cls_output[:, -1] < self.bg_thresh
                 cls_output = cls_output[inds_keep, :-1]
                 bbox_output = bbox_output[inds_keep]
