@@ -86,7 +86,7 @@ def draw_mask(image, mask, color=(0, 0, 255), alpha=0.3):
     image[mask_pos] += mask[mask_pos]
 
 
-def draw_detections(image, boxes, scores, labels, color=None, label_to_name=None, score_threshold=0.5):
+def draw_detections(image, boxes, scores, labels, color=None, label_to_name=None, score_threshold=0.05):
     """ Draws detections in an image.
     # Arguments
         image           : The image to draw on.
