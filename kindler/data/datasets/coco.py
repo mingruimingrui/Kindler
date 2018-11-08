@@ -41,6 +41,8 @@ class CocoDataset(DetectionDataset):
             annotation_infos = self.coco.imgToAnns[idx]
             anns = []
             for ann_info in annotation_infos:
+                if ann_info['iscrowd'] == 1:
+                    continue
                 bbox = ann_info['bbox']
                 bbox[2] += bbox[0]
                 bbox[3] += bbox[1]
