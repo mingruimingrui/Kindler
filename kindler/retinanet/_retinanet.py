@@ -10,7 +10,6 @@ from ..utils import anchors as utils_anchors
 from ..utils.nms import nms as box_nms
 
 conv_3x3_kwargs = {'kernel_size': 3, 'stride': 1, 'padding': 1}
-conv_1x1_kwargs = {'kernel_size': 1, 'stride': 1, 'padding': 0}
 
 
 class ClassificationHead(torch.nn.Module):
@@ -63,7 +62,7 @@ class ClassificationHead(torch.nn.Module):
         head.append(torch.nn.Conv2d(
             input_feature_size if num_layers == 0 else feature_size,
             total_num_classes * num_anchors,
-            **conv_1x1_kwargs
+            **conv_3x3_kwargs
         ))
         head.append(torch.nn.Sigmoid())
 
@@ -145,7 +144,7 @@ class RegressionHead(torch.nn.Module):
         head.append(torch.nn.Conv2d(
             input_feature_size if num_layers == 0 else feature_size,
             num_anchors * self.total_num_bbox,
-            **conv_1x1_kwargs
+            **conv_3x3_kwargs
         ))
 
         self.head = torch.nn.Sequential(*head)
@@ -215,7 +214,7 @@ class CombinedHead(torch.nn.Module):
         head.append(torch.nn.Conv2d(
             input_feature_size if num_layers == 0 else feature_size,
             num_anchors * (total_num_classes + self.total_num_bbox),
-            **conv_1x1_kwargs
+            **conv_3x3_kwargs
         ))
 
         # Initialize classification output to prior_prob
