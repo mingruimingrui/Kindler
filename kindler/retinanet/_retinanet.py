@@ -530,7 +530,7 @@ class FilterDetections(torch.nn.Module):
                 detections['labels'] = torch.cat(detections['labels'], dim=0)
 
             else:
-                scores, labels = torch.max(cls_output)
+                scores, labels = torch.max(cls_output, dim=1)
                 filtered_output = self.filter_detections(
                     boxes=bbox_output,
                     scores=scores,
@@ -555,7 +555,7 @@ class FilterDetections(torch.nn.Module):
             labels = labels[inds_keep]
 
         # Sort scores and keep only pre_nms_top_n
-        scores, order = torch.sort(scores)
+        scores, order = torch.sort(scores, descending=True)
         order = order[:self.pre_nms_top_n]
         boxes = boxes[order]
         scores = scores[:self.pre_nms_top_n]
