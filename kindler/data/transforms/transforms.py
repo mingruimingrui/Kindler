@@ -110,6 +110,8 @@ class ImageResize(object):
         check_image_is_numpy(item['image'])
         height, width, height_scale, width_scale = self._determine_size(item['image'].shape)
         item['image'] = cv2.resize(item['image'], (width, height))
+        item['height_scale'] = height_scale
+        item['width_scale'] = width_scale
 
         if 'annotations' in item:
             item['annotations'][:, 0] *= width_scale
