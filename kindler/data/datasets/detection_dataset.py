@@ -65,11 +65,16 @@ class DetectionDataset(torch.utils.data.Dataset):
             'image': read_image(image_path),
             'annotations': self.annotations[idx]
         }
+        if len(item['annotations']) == 0:
+            item['annotations'] = np.zeros((0, 5), dtype='float32')
 
         if hasattr(self, 'segms'):
             w, h = item['image'].size
             segms = self.segms[idx]
-            item['masks'] = [utils_mask.segm_to_mask(segm, h, w) for segm in segms]
+            if len(segms) > 0:
+                item['masks'] = [utils_mask.segm_to_mask(segm, h, w) for segm in segms]
+            else:
+                item['masks'] = np.zeros((0, h, w), dtype='float32')
 
         if hasattr(self, 'keypoints'):
             item['keypoints'] = self.keypoints[idx]
@@ -80,6 +85,9 @@ class DetectionDataset(torch.utils.data.Dataset):
         for key, value in item.items():
             if key == 'idx':
                 continue
+            if key == 'annotations' and len(value) == 0:
+                value = np.zeros((0, 5), dtype='float32')
+            if key =='segms'
             item[key] = np.array(value, dtype='float32')
 
         if hasattr(self, 'transforms'):
