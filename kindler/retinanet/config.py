@@ -13,29 +13,27 @@ _C = ConfigSystem()
 config = _C
 
 
-# ---------------------------------------------------------------------------- #
+# --------------------------------------------------------------------------- #
 # Backbone options
-# ---------------------------------------------------------------------------- #
+# --------------------------------------------------------------------------- #
 _C.BACKBONE = backbone_config.clone()
 _C.BACKBONE.immutable(False)
-
 # Refer to kindler.backbone.config for full list of configs
 
-# ---------------------------------------------------------------------------- #
+# --------------------------------------------------------------------------- #
 # FPN options
-# ---------------------------------------------------------------------------- #
+# --------------------------------------------------------------------------- #
 _C.FPN = fpn_config.clone()
 _C.BACKBONE.immutable(False)
-
 # Refer to kindler.fpn.config for full list of configs
 # You can safely ignore BACKBONE_CHANNEL_SIZES, MIN_INPUT_LEVEL and
 # MAX_INPUT_LEVEL as these are values that will be inferred from your backbone
 # However do note that the FPN configs will determine the feature levels at
 # which retinanet will be predicting on
 
-# ---------------------------------------------------------------------------- #
+# --------------------------------------------------------------------------- #
 # Classifier and regressor options
-# ---------------------------------------------------------------------------- #
+# --------------------------------------------------------------------------- #
 _C.CLASSIFIER = ConfigSystem()
 _C.REGRESSOR = ConfigSystem()
 _C.COMBINED = ConfigSystem()
@@ -64,9 +62,9 @@ _C.COMBINED.FEATURE_SIZE = 256
 # Number of layers of convolution layers in the combined head
 _C.COMBINED.NUM_LAYERS = 4
 
-# ---------------------------------------------------------------------------- #
+# --------------------------------------------------------------------------- #
 # Anchor options
-# ---------------------------------------------------------------------------- #
+# --------------------------------------------------------------------------- #
 _C.ANCHOR = ConfigSystem()
 
 # The ratios of anchors at each moving window
@@ -83,13 +81,15 @@ _C.ANCHOR.SIZE_MULT = 4.0
 # The anchor stride at level n will be "STRIDE_MULT * (2 ** n)"
 _C.ANCHOR.STRIDE_MULT = 1.0
 
-# ---------------------------------------------------------------------------- #
+# --------------------------------------------------------------------------- #
 # Target options
-# ---------------------------------------------------------------------------- #
+# --------------------------------------------------------------------------- #
 _C.TARGET = ConfigSystem()
+# Target options are here to control how model outputs are to be produced from
+# groundth truth annotations
 
 # Then number of object classes to predict
-# This is a required variable
+# This is a required variable you should not leave this at -1
 _C.TARGET.NUM_CLASSES = -1
 
 # Should there be a background class?
@@ -105,18 +105,19 @@ _C.TARGET.POSITIVE_OVERLAP = 0.5
 # Overlap threshold for classification to be negative
 _C.TARGET.NEGATIVE_OVERLAP = 0.4
 
-# ---------------------------------------------------------------------------- #
+# --------------------------------------------------------------------------- #
 # Initialization options
-# ---------------------------------------------------------------------------- #
+# --------------------------------------------------------------------------- #
 _C.INITIALIZATION = ConfigSystem()
 
 # Initial classification output for objects
-# Initial background (if background predictor is true) output will be 1 - PRIOR_PROB
+# Initial background (if background predictor is true)
+# output will be 1 - PRIOR_PROB
 _C.INITIALIZATION.PRIOR_PROB = 0.01
 
-# ---------------------------------------------------------------------------- #
+# --------------------------------------------------------------------------- #
 # Loss options
-# ---------------------------------------------------------------------------- #
+# --------------------------------------------------------------------------- #
 _C.LOSS = ConfigSystem()
 
 # Use focal loss? If not use BCE loss for classification
@@ -134,37 +135,39 @@ _C.LOSS.REG_WEIGHT = 1.0
 # Smooth L1 loss beta for bounding box regression
 _C.LOSS.REG_BETA = 0.11
 
-# ---------------------------------------------------------------------------- #
-# Output options
-# ---------------------------------------------------------------------------- #
-_C.OUTPUT = ConfigSystem()
+# --------------------------------------------------------------------------- #
+# Eval options
+# --------------------------------------------------------------------------- #
+_C.EVAL = ConfigSystem()
+# These are settings which are only applicable during evaluation
 
 # Apply nms on output? If not just returns raw output
-_C.OUTPUT.APPLY_NMS = True
+_C.EVAL.APPLY_NMS = True
 
 # Perform nms for each class
-_C.OUTPUT.CLASS_SPECIFIC_NMS = True
+_C.EVAL.CLASS_SPECIFIC_NMS = True
 
 # Maximum number of anchors to consider before nms
-_C.OUTPUT.PRE_NMS_TOP_N = 1000
+_C.EVAL.PRE_NMS_TOP_N = 1000
 
 # Maximum number of detections to produce
-_C.OUTPUT.POST_NMS_TOP_N = 300
+_C.EVAL.POST_NMS_TOP_N = 300
 
 # Threshold to filter detections for NMS
-_C.OUTPUT.NMS_THRESH = 0.5
+_C.EVAL.NMS_THRESH = 0.5
 
 # Threshold to filter detection scores
-_C.OUTPUT.SCORE_THRESH = 0.3
+_C.EVAL.SCORE_THRESH = 0.3
 
 # Threshold to determine if an area is background
 # Will only be used if BG_PREDICTOR is used
-_C.OUTPUT.BG_THRESH = 0.7
+_C.EVAL.BG_THRESH = 0.7
 
-# ---------------------------------------------------------------------------- #
+# --------------------------------------------------------------------------- #
 # End of options
-# ---------------------------------------------------------------------------- #
+# --------------------------------------------------------------------------- #
 _C.immutable(True)
+
 
 def validate_config(config):
     """
@@ -176,7 +179,9 @@ def validate_config(config):
     config.FPN.update({'BACKBONE_CHANNEL_SIZES': backbone_channel_sizes})
 
     assert config.TARGET.NUM_CLASSES >= 1, \
-        'Num classes is a required variable, it cannot be {}'.format(config.TARGET.NUM_CLASSES)
+        'Num classes is a required variable, it cannot be {}'.format(
+            config.TARGET.NUM_CLASSES
+        )
 
     assert 0.0 <= config.TARGET.POSITIVE_OVERLAP <= 1.0, \
         'Value of POSITIVE_OVERLAP is invalid'
@@ -187,11 +192,11 @@ def validate_config(config):
     assert 0.0 <= config.INITIALIZATION.PRIOR_PROB <= 1.0, \
         'Value of PRIOR_PROB is invalid'
 
-    assert 0.0 <= config.OUTPUT.NMS_THRESH <= 1.0, \
+    assert 0.0 <= config.EVAL.NMS_THRESH <= 1.0, \
         'Value of NMS_THRESH is invalid'
 
-    assert 0.0 <= config.OUTPUT.SCORE_THRESH <= 1.0, \
+    assert 0.0 <= config.EVAL.SCORE_THRESH <= 1.0, \
         'Value of SCORE_THRESH is invalid'
 
-    assert 0.0 <= config.OUTPUT.BG_THRESH <= 1.0, \
+    assert 0.0 <= config.EVAL.BG_THRESH <= 1.0, \
         'Value of BACKGROUND_THRESH is invalid'

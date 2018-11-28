@@ -139,12 +139,12 @@ class RetinaNet(torch.nn.Module):
         )
 
         self.filter_detections = FilterDetections(
-            apply_nms=self.config.OUTPUT.APPLY_NMS,
-            class_specific_nms=self.config.OUTPUT.CLASS_SPECIFIC_NMS,
-            pre_nms_top_n=self.config.OUTPUT.PRE_NMS_TOP_N,
-            post_nms_top_n=self.config.OUTPUT.POST_NMS_TOP_N,
-            nms_thresh=self.config.OUTPUT.NMS_THRESH,
-            score_thresh=self.config.OUTPUT.SCORE_THRESH,
-            bg_thresh=self.config.OUTPUT.BG_THRESH,
+            apply_nms=self.config.EVAL.APPLY_NMS,
+            class_specific_nms=self.config.EVAL.CLASS_SPECIFIC_NMS,
+            pre_nms_top_n=self.config.EVAL.PRE_NMS_TOP_N,
+            post_nms_top_n=self.config.EVAL.POST_NMS_TOP_N,
+            nms_thresh=self.config.EVAL.NMS_THRESH,
+            score_thresh=self.config.EVAL.SCORE_THRESH,
+            bg_thresh=self.config.EVAL.BG_THRESH,
             use_bg_predictor=self.config.TARGET.BG_PREDICTOR
         )

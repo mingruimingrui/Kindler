@@ -88,6 +88,7 @@ class ClassificationHead(torch.nn.Module):
         self.head = torch.nn.Sequential(*head)
 
     def forward(self, x):
+        batch_size = x.shape[0]
         x = self.head(x)
 
         if self.use_bg_predictor:
@@ -96,7 +97,6 @@ class ClassificationHead(torch.nn.Module):
             return torch.cat([classification, background], dim=2)
         else:
             return x.permute(0, 2, 3, 1).reshape(x.shape[0], -1, self.num_classes)
-
 
 
 class RegressionHead(torch.nn.Module):
@@ -488,15 +488,15 @@ class FilterDetections(torch.nn.Module):
         use_bg_predictor=False
     ):
         super(FilterDetections, self).__init__()
-        self.apply_nms=apply_nms
-        self.class_specific_nms=class_specific_nms
-        self.pre_nms_top_n=pre_nms_top_n
-        self.post_nms_top_n=post_nms_top_n
-        self.nms_thresh=nms_thresh
-        self.score_thresh=score_thresh
-        self.use_bg_predictor=use_bg_predictor
+        self.apply_nms = apply_nms
+        self.class_specific_nms = class_specific_nms
+        self.pre_nms_top_n = pre_nms_top_n
+        self.post_nms_top_n = post_nms_top_n
+        self.nms_thresh = nms_thresh
+        self.score_thresh = score_thresh
+        self.use_bg_predictor = use_bg_predictor
         if self.use_bg_predictor:
-            self.bg_thresh=bg_thresh
+            self.bg_thresh = bg_thresh
 
     def forward(self, cls_output_batch, reg_output_batch, anchors):
         bbox_output_batch = utils_anchors.bbox_transform_inv(anchors[None, ...], reg_output_batch)
