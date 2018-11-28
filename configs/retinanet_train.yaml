@@ -1,3 +1,4 @@
+---
 model_config_file: './configs/retinanet_config.yaml'
 ann_files: 'path to instances_train201X'
 root_img_dirs: 'path to images directory'

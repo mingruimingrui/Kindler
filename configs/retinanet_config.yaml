@@ -1,10 +1,11 @@
+---
 BACKBONE:
   TYPE: resnet50
 FPN:
   MIN_LEVEL: 3
   MAX_LEVEL: 7
 COMBINED:
-  USE: True
+  USE: true
   NUM_LAYERS: 4
 TARGET:
   NUM_CLASSES: 80
