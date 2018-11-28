@@ -62,8 +62,8 @@ class DetectionDataset(torch.utils.data.Dataset):
         image_path = os.path.join(self.root_dir, self.image_files[idx])
         item = {
             'idx': idx,
-            'image': read_image(image_path),
-            'annotations': self.annotations[idx]
+            'image': np.asarray(read_image(image_path)),
+            'annotations': np.array(self.annotations[idx])
         }
         if len(item['annotations']) == 0:
             item['annotations'] = np.zeros((0, 5), dtype='float32')
