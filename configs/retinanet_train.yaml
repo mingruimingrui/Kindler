@@ -1,7 +1,7 @@
 ---
 model_config_file: './configs/retinanet_config.yaml'
+root_image_dirs: 'path to images directory'
 ann_files: 'path to instances_train201X'
-root_img_dirs: 'path to images directory'
 
 batch_size: 1
 max_iter: 1440000
