@@ -191,7 +191,6 @@ def main(args):
 
     # Make model
     model = RetinaNet(config_file=args.model_config_file).cuda()
-    model_config = model.config
     assert model.config.TARGET.NUM_CLASSES == 80, \
         'Requires RetinaNet config file to define num_classes as 80'
 
@@ -225,7 +224,7 @@ def main(args):
     ))
 
     logger.info('Model config: {}\n'.format(
-        json.dumps(dict(model_config), indent=2)
+        json.dumps(dict(model.config), indent=2)
     ))
 
     do_train(
