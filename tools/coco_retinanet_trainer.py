@@ -43,36 +43,49 @@ def makedirs(path):
 def parse_args(args):
     parser = argparse.ArgumentParser('Trainer for detection model')
 
-    parser.add_argument('-y', '--yaml-file', type=str,
+    parser.add_argument(
+        '-y', '--yaml-file', type=str,
         help='Path to yaml file containing script configs')
 
-    parser.add_argument('--model-config-file', type=str,
+    parser.add_argument(
+        '--model-config-file', type=str,
         help='Path to model config file')
-    parser.add_argument('--ann-files', type=str, nargs='+',
+    parser.add_argument(
+        '--ann-files', type=str, nargs='+',
         help='Path to annotation files multiple files can be accepted')
-    parser.add_argument('--root-img-dirs', type=str, nargs='+',
+    parser.add_argument(
+        '--root-img-dirs', type=str, nargs='+',
         help='Path to image directories, should have same entries as ann files')
 
-    parser.add_argument('--batch-size', type=int, default=1,
+    parser.add_argument(
+        '--batch-size', type=int, default=1,
         help='Size of batches during training')
-    parser.add_argument('--max-iter', type=int, default=1440000,
+    parser.add_argument(
+        '--max-iter', type=int, default=1440000,
         help='Maximum number of iterations to perform during training')
-    parser.add_argument('--base-lr', type=float, default=0.001,
+    parser.add_argument(
+        '--base-lr', type=float, default=0.001,
         help='Learning rate to use during training')
-    parser.add_argument('--warmup-iters', type=int, default=8000,
+    parser.add_argument(
+        '--warmup-iters', type=int, default=8000,
         help='Number of iterations for SGD warm up')
 
-    parser.add_argument('--min-image-size', type=int, default=800,
+    parser.add_argument(
+        '--min-image-size', type=int, default=800,
         help='Minimum image resized size')
-    parser.add_argument('--max-image-size', type=int, default=1333,
+    parser.add_argument(
+        '--max-image-size', type=int, default=1333,
         help='Maximum image resized size')
 
-    parser.add_argument('--log-dir', type=str, default='./',
+    parser.add_argument(
+        '--log-dir', type=str, default='./',
         help='Directory to store log files')
-    parser.add_argument('--checkpoint-dir', type=str, default='./',
+    parser.add_argument(
+        '--checkpoint-dir', type=str, default='./',
         help='Directory to store checkpoint files')
 
-    parser.add_argument('--local_rank', type=int, default=0,
+    parser.add_argument(
+        '--local_rank', type=int, default=0,
         help='For torch.distributed.launch')
 
     return parser.parse_args(args)
