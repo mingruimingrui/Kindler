@@ -12,6 +12,7 @@ def make_coco_data_loader(
     batch_size=1,
     num_workers=2,
     shuffle=False,
+    drop_no_anns=True,
     mask=False,
     min_size=800,
     max_size=1333,
@@ -51,7 +52,8 @@ def make_coco_data_loader(
         coco_dataset,
         batch_size=batch_size,
         random_sample=shuffle,
-        num_iter=num_iter
+        num_iter=num_iter,
+        drop_no_anns=drop_no_anns
     )
 
     return DataLoader(
