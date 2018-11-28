@@ -21,12 +21,20 @@ def make_coco_data_loader(
     """
     Creates a coco data loader
     """
-    image_transforms = transforms.Compose([
-        transforms.ImageResize(min_size=min_size, max_size=max_size),
-        transforms.RandomHorizontalFlip(),
+    image_transforms = [transforms.ImageResize(min_size=min_size, max_size=max_size)]
+
+    if random_horizontal_flip:
+        image_transforms.append(transforms.RandomHorizontalFlip())
+
+    if random_vertical_flip:
+        image_transforms.append(transforms.RandomVerticalFlip())
+
+    image_transforms += [
         transforms.ImageNormalization(),
         transforms.ToTensor()
-    ])
+    ]
+
+    image_transforms = transforms.Compose(image_transforms)
     image_collate = ImageCollate()
 
     datasets = []
