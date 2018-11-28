@@ -98,7 +98,7 @@ class ImageResize(object):
         # If max_size is not satisfied, use scaling at max_size
         scale = self.min_size / min_orig_size
         if self.max_size is not None:
-            if self.max_size > max_orig_size * scale:
+            if self.max_size < max_orig_size * scale:
                 scale = self.max_size / max_orig_size
 
         new_height = round(orig_height * scale)
@@ -208,7 +208,7 @@ class ToTensor(object):
     @classmethod
     def _to_tensor(cls, obj):
         if isinstance(obj, np.ndarray):
-            return torch.from_numpy(obj.copy())
+            return torch.from_numpy(obj.copy()).float()
         elif isinstance(obj, string_classes):
             return obj
         elif isinstance(obj, container_abcs.Mapping):
