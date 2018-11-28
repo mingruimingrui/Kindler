@@ -424,7 +424,7 @@ class ComputeLosses(torch.nn.Module):
             # Use a hack to create a zero loss
             reg_loss = torch.zeros_like(num_pos_anchors).float()
         else:
-            reg_loss = self.reg_loss_fn(reg_output, reg_target)
+            reg_loss = self.reg_loss_fn(reg_output, reg_target) * self.reg_weight
 
         if self.use_bg_predictor:
             # Get background output and targets
