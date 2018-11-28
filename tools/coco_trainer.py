@@ -12,7 +12,6 @@ import logging
 import argparse
 
 import torch
-from torch.utils.data import ConcatDataset, DataLoader
 
 # Trainer
 from kindler.engine import do_train
@@ -22,10 +21,7 @@ from kindler.retinanet import RetinaNet
 from kindler.solver import make_sgd_optimizer, WarmupMultiStepLR
 
 # Dataset
-from kindler.data.datasets import CocoDataset
-from kindler.data.samplers import DetectionSampler
-from kindler.data.collate import ImageCollate
-from kindler.data import transforms
+from kindler.data.data_loaders import make_coco_data_loader
 
 # Env and logging
 from kindler.utils.logger import setup_logging
@@ -54,7 +50,7 @@ def parse_args(args):
         '--ann-files', type=str, nargs='+',
         help='Path to annotation files multiple files can be accepted')
     parser.add_argument(
-        '--root-img-dirs', type=str, nargs='+',
+        '--root-image-dirs', type=str, nargs='+',
         help='Path to image directories, should have same entries as ann files')
 
     parser.add_argument(
@@ -108,10 +104,10 @@ def config_args(args):
 
     if isinstance(args.ann_files, str):
         args.ann_files = [args.ann_files]
-    if isinstance(args.root_img_dirs, str):
-        args.root_img_dirs = [args.root_img_dirs]
+    if isinstance(args.root_image_dirs, str):
+        args.root_image_dirs = [args.root_image_dirs]
 
-    assert len(args.ann_files) == len(args.root_img_dirs)
+    assert len(args.ann_files) == len(args.root_image_dirs)
 
     assert args.batch_size > 0
     assert args.max_iter > 0
@@ -121,6 +117,10 @@ def config_args(args):
     makedirs(args.checkpoint_dir)
 
     return args
+
+
+def get_num_gpus():
+    return int(os.environ["WORLD_SIZE"]) if "WORLD_SIZE" in os.environ else 1
 
 
 def make_lr_scheduler(optimizer, args):
@@ -136,40 +136,45 @@ def make_lr_scheduler(optimizer, args):
     )
 
 
+def make_distributed_model(model, args):
+    return torch.nn.parallel.deprecated.DistributedDataParallel(
+        model,
+        device_ids=[args.local_rank],
+        output_device=args.local_rank,
+        broadcast_buffers=False
+    )
+
+
 def make_data_loader(args):
-    image_transforms = transforms.Compose([
-        # transforms.ImageResize(min_size=800, max_size=1333),
-        transforms.ImageResize(min_size=args.min_image_size, max_size=args.max_image_size),
-        transforms.RandomHorizontalFlip(),
-        transforms.ImageNormalization(),
-        transforms.ToTensor()
-    ])
-    image_collate = ImageCollate()
-
-    datasets = []
-    for root_img_dir, ann_file in zip(args.root_img_dirs, args.ann_files):
-        datasets.append(CocoDataset(
-            root_img_dir,
-            ann_file,
-            mask=False,
-            transforms=image_transforms
-        ))
-
-    coco_dataset = ConcatDataset(datasets)
-    batch_sampler = DetectionSampler(
-        coco_dataset,
+    return make_coco_data_loader(
+        root_image_dirs=args.root_image_dirs,
+        ann_files=args.root_ann_files,
+        num_iter=args.max_iter,
         batch_size=args.batch_size,
-        random_sample=True,
-        num_iter=args.max_iter
+        num_workers=args.batch_size * 2,
+        shuffle=True,
+        drop_no_anns=True,
+        mask=False,
+        min_size=args.max_image_size,
+        max_size=args.min_image_size,
+        random_horizontal_flip=True,
+        random_vertical_flip=False
     )
 
-    return DataLoader(
-        coco_dataset,
-        collate_fn=image_collate,
-        batch_sampler=batch_sampler,
-        num_workers=args.batch_size * 2,
-        # pin_memory=True
-    )
+
+def log_configs(model, args):
+    logger.info('Collecting env info')
+    logger.info('\n' + collect_env_info() + '\n')
+
+    logger.info('Using {} GPUs\n'.format(get_num_gpus()))
+
+    logger.info('Training config: {}\n'.format(
+        json.dumps(vars(args), indent=2)
+    ))
+
+    logger.info('Model config: {}\n'.format(
+        json.dumps(dict(model.config), indent=2)
+    ))
 
 
 def loss_fn(model, batch):
@@ -181,8 +186,7 @@ def main(args):
     torch.cuda.set_device(args.local_rank)
 
     # Identify if using distributed training
-    num_gpus = int(os.environ["WORLD_SIZE"]) if "WORLD_SIZE" in os.environ else 1
-    distributed = num_gpus > 1
+    distributed = get_num_gpus() > 1
     if distributed:
         torch.distributed.deprecated.init_process_group(
             backend='nccl',
@@ -200,12 +204,7 @@ def main(args):
 
     # Make model distributed
     if distributed:
-        model = torch.nn.parallel.deprecated.DistributedDataParallel(
-            model,
-            device_ids=[args.local_rank],
-            output_device=args.local_rank,
-            broadcast_buffers=False
-        )
+        model = make_distributed_model(model, args)
 
     # Make data loader
     data_loader = make_data_loader(args)
@@ -214,18 +213,8 @@ def main(args):
     if is_main_process():
         setup_logging(os.path.join(args.log_dir, 'train.log'))
 
-    logger.info('Collecting env info')
-    logger.info('\n' + collect_env_info() + '\n')
-
-    logger.info('Using {} GPUs\n'.format(num_gpus))
-
-    logger.info('Training config: {}\n'.format(
-        json.dumps(vars(args), indent=2)
-    ))
-
-    logger.info('Model config: {}\n'.format(
-        json.dumps(dict(model.config), indent=2)
-    ))
+    # Log environment and training configs
+    log_configs(model, args)
 
     do_train(
         model=model,
