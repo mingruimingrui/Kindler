@@ -16,8 +16,6 @@ from ..utils.comm import get_world_size, is_main_process
 
 logger = logging.getLogger(__name__)
 
-maximum_allowable_cache = 8 * 1024 ** 3
-
 
 def reduce_loss_dict(loss_dict):
     """
@@ -112,13 +110,12 @@ def do_train(
         loss_dict['total_loss'].backward()
         optimizer.step()
 
+        # Free up redundant CUDA objects
+        del loss_dict_reduced, loss_dict, batch
+
         batch_time = time.time() - t0
         t0 = time.time()
         meters.update(batch_time=batch_time, data_time=data_time)
-
-        # Clear cache
-        if torch.cuda.memory_cached() > maximum_allowable_cache:
-            torch.cuda.empty_cache()
 
         if iter % checkpoint_period == 0 and iter > 0:
             save_model(checkpoint_dir, iter, model, optimizer, scheduler)
