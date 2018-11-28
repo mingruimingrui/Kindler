@@ -13,6 +13,7 @@ def segm_to_mask(segm, h=None, w=None):
     rle = segm_to_rle(segm, h, w)
     return maskUtils.decode(rle)
 
+
 def segm_to_rle(segm, h=None, w=None):
     """
     Converts a segmentation into RLE
@@ -28,6 +29,7 @@ def segm_to_rle(segm, h=None, w=None):
         rle = segm
 
     return rle
+
 
 def mask_to_polygon(mask):
     """

@@ -22,8 +22,8 @@ def read_image_url(url):
 
 
 ###############################################################################
-#### Following section is taken directly from
-#### https://github.com/scardine/image_size/blob/master/get_image_size.py
+# Following section is taken directly from
+# https://github.com/scardine/image_size/blob/master/get_image_size.py
 
 
 class UnknownImageFormat(Exception):

@@ -109,7 +109,7 @@ def shift_anchors(shape, stride, anchors):
 
 def bbox_transform(anchors, gt_boxes, mean=0.0, std=0.2):
     """ Compute bounding-box regression targets for an image """
-    anchor_widths  = anchors[:, 2] - anchors[:, 0]
+    anchor_widths = anchors[:, 2] - anchors[:, 0]
     anchor_heights = anchors[:, 3] - anchors[:, 1]
 
     targets_dx1 = (gt_boxes[:, 0] - anchors[:, 0]) / anchor_widths
@@ -125,18 +125,24 @@ def bbox_transform(anchors, gt_boxes, mean=0.0, std=0.2):
 
 def bbox_transform_inv(boxes, deltas, mean=0.0, std=0.2):
     """ Applies deltas (usually regression results) to boxes (usually anchors).
-    Before applying the deltas to the boxes, the normalization that was previously applied (in the generator) has to be removed.
-    The mean and std are the mean and std as applied in the generator. They are unnormalized in this function and then applied to the boxes.
+    Before applying the deltas to the boxes, the normalization that was
+    previously applied (in the generator) has to be removed.
+    The mean and std are the mean and std as applied in the generator. They are
+    unnormalized in this function and then applied to the boxes.
     Args
-        boxes : torch.Tensor of shape (N, 4), where N the number of boxes and 4 values for (x1, y1, x2, y2).
-        deltas: torch.Tensor of same shape as boxes. These deltas (d_x1, d_y1, d_x2, d_y2) are a factor of the width/height.
-        mean  : The mean value used when computing deltas (defaults to [0, 0, 0, 0]).
-        std   : The standard deviation used when computing deltas (defaults to [0.2, 0.2, 0.2, 0.2]).
+        boxes : torch.Tensor of shape (N, 4), where N the number of boxes and
+            4 values for (x1, y1, x2, y2).
+        deltas: torch.Tensor of same shape as boxes. These deltas
+            (d_x1, d_y1, d_x2, d_y2) are a factor of the width/height.
+        mean  : The mean value used when computing deltas
+            (defaults to [0, 0, 0, 0]).
+        std   : The standard deviation used when computing deltas
+            (defaults to [0.2, 0.2, 0.2, 0.2]).
     Returns
         A torch.Tensor of the same shape as boxes, but with deltas applied to each box.
         The mean and std are used during training to normalize the regression values (networks love normalization).
     """
-    width  = boxes[..., 2] - boxes[..., 0]
+    width = boxes[..., 2] - boxes[..., 0]
     height = boxes[:, :, 3] - boxes[..., 1]
 
     x1 = boxes[..., 0] + (deltas[..., 0] * std + mean) * width
@@ -161,19 +167,24 @@ def anchor_targets_bbox(
     """ Generate anchor targets for bbox detection.
     Args
         anchors: torch.Tensor of shape (A, 4) in the (x1, y1, x2, y2) format.
-        annotations: torch.Tensor of shape (N, 5) in the (x1, y1, x2, y2, label) format.
+        annotations: torch.Tensor of shape (N, 5) in the
+            (x1, y1, x2, y2, label) format.
         num_classes: Number of classes to predict.
-        mask_shape: If the image is padded with zeros, mask_shape can be used to mark the relevant part of the image.
+        mask_shape: If the image is padded with zeros, mask_shape can be used
+            to mark the relevant part of the image.
         use_class_specific_bbox: Should each class have it's own bbox?
-        negative_overlap: IoU overlap for negative anchors (all anchors with overlap < negative_overlap are negative).
-        positive_overlap: IoU overlap or positive anchors (all anchors with overlap > positive_overlap are positive).
+        negative_overlap: IoU overlap for negative anchors
+            (all anchors with overlap < negative_overlap are negative).
+        positive_overlap: IoU overlap or positive anchors
+            (all anchors with overlap > positive_overlap are positive).
     Returns
-        cls_target: torch.Tensor containing the classification target at each anchor position
-            shape will be (A, num_classes)
-        bbox_target: torch.Tensor containing the detection bbox at each anchor position
-            shape will be (A, 4) if not using class specific bbox
-            or (A, 4 * num_classes) if using class specific bbox
-        anchor_states: anchor_states: torch.Tensor of shape (N,) containing the state of each anchor (-1 for ignore, 0 for bg, 1 for fg).
+        cls_target: torch.Tensor containing the classification target at
+            each anchor position shape will be (A, num_classes)
+        bbox_target: torch.Tensor containing the detection bbox at each
+            anchor position shape will be (A, 4) if not using class specific
+            bbox or (A, 4 * num_classes) if using class specific bbox
+        anchor_states: anchor_states: torch.Tensor of shape (N,) containing
+            the state of each anchor (-1 for ignore, 0 for bg, 1 for fg).
     """
     # Create blobs that will hold results
     # anchor states: 1 is positive, 0 is negative, -1 is dont care
@@ -186,14 +197,14 @@ def anchor_targets_bbox(
 
     if annotations.shape[0] > 0:
         # obtain indices of gt annotations with the greatest overlap
-        overlaps             = compute_overlap(anchors, annotations)
+        overlaps = compute_overlap(anchors, annotations)
         argmax_overlaps_inds = torch.argmax(overlaps, dim=1)
-        max_overlaps         = overlaps[range(overlaps.shape[0]), argmax_overlaps_inds]
+        max_overlaps = overlaps[range(overlaps.shape[0]), argmax_overlaps_inds]
 
         # assign "dont care" labels
-        ignore_inds                  = max_overlaps > negative_overlap
-        anchor_states[ignore_inds]   = -1
-        positive_inds                = max_overlaps >= positive_overlap
+        ignore_inds = max_overlaps > negative_overlap
+        anchor_states[ignore_inds] = -1
+        positive_inds = max_overlaps >= positive_overlap
         anchor_states[positive_inds] = 1
 
         # compute classification and regression targets
@@ -206,9 +217,9 @@ def anchor_targets_bbox(
             # though the overall cost in the scope of training is rather
             # insignificant
             # Possible improvements with scatter functions
-            positive_cls  = annotations[:, 4].long()
+            positive_cls = annotations[:, 4].long()
             positive_bbox = annotations[:, :4]
-            positive_cls_target  = cls_target[positive_inds]
+            positive_cls_target = cls_target[positive_inds]
             positive_bbox_target = bbox_target[positive_inds]
 
             for i in range(total_positive_inds):

@@ -33,6 +33,7 @@ def tensor_to_image(tensor_image):
     np_image = np_image.round().clip(min=0, max=255).astype('uint8')
     return Image.fromarray(np_image)
 
+
 def visualize_batch(batch):
     """ Visualize a collated image batch """
     batch_size = len(batch['image'])

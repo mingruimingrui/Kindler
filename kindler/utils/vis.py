@@ -57,7 +57,8 @@ def draw_points(image, points, color=(0, 255, 0)):
     """ Draws points on an image
     # Arguments
         image  : The image to draw on
-        points : A (num_points, 2) shaped array containing the (x, y) coordinates of the points
+        points : A (num_points, 2) shaped array containing the (x, y)
+            coordinates of the points
         color  : The color of the points. Default is green
     """
     for point in points:
@@ -93,7 +94,8 @@ def draw_detections(image, boxes, scores, labels, color=None, label_to_name=None
         boxes           : A [N, 4] matrix (x1, y1, x2, y2).
         scores          : A list of N classification scores.
         labels          : A list of N labels.
-        color           : The color of the boxes. By default the color from keras_pipeline.utils.colors.label_color will be used.
+        color           : The color of the boxes. By default the color from
+            kindler.utils.colors.label_color will be used.
         label_to_name   : (optional) Functor for mapping a label to a name.
         score_threshold : Threshold used for determining what detections to draw.
     """
@@ -116,12 +118,13 @@ def draw_annotations(image, annotations, color=None, label_to_name=None):
     # Arguments
         image         : The image to draw on.
         annotations   : A [N, 5] matrix (x1, y1, x2, y2, label).
-        color         : The color of the boxes. By default the color from keras_pipeline.utils.colors.label_color will be used.
+        color         : The color of the boxes. By default the color from
+            kindler.utils.colors.label_color will be used.
         label_to_name : (optional) Functor for mapping a label to a name.
     """
     for a in annotations:
-        label   = a[4]
-        c       = color if color is not None else label_color(label)
+        label = a[4]
+        c = color if color is not None else label_color(label)
         caption = '{}'.format(label_to_name(label) if label_to_name else label)
         draw_caption(image, a, caption)
 
