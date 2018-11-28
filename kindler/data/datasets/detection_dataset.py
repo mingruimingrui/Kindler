@@ -87,8 +87,8 @@ class DetectionDataset(torch.utils.data.Dataset):
                 continue
             if key == 'annotations' and len(value) == 0:
                 value = np.zeros((0, 5), dtype='float32')
-            if key =='segms'
-            item[key] = np.array(value, dtype='float32')
+            if key == 'segms':
+                item[key] = np.array(value, dtype='float32')
 
         if hasattr(self, 'transforms'):
             item = self.transforms(item)
