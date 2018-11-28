@@ -15,6 +15,9 @@ from ._retinanet import (
 
 
 class RetinaNet(torch.nn.Module):
+    """
+    Retinanet from FAIR https://arxiv.org/abs/1708.02002
+    """
     def __init__(self, config_file=None, num_classes=None, **kwargs):
         super(RetinaNet, self).__init__()
 
