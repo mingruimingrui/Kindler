@@ -148,7 +148,7 @@ def make_distributed_model(model, args):
 def make_data_loader(args):
     return make_coco_data_loader(
         root_image_dirs=args.root_image_dirs,
-        ann_files=args.root_ann_files,
+        ann_files=args.ann_files,
         num_iter=args.max_iter,
         batch_size=args.batch_size,
         num_workers=args.batch_size * 2,
