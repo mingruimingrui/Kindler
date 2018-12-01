@@ -222,6 +222,7 @@ def main(args):
         loss_fn=loss_fn,
         optimizer=optimizer,
         scheduler=scheduler,
+        checkpoint_period=20000 // args.batch_size,
         checkpoint_dir=args.checkpoint_dir
     )
 
