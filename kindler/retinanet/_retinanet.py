@@ -424,7 +424,7 @@ class ComputeLosses(torch.nn.Module):
             # Use a hack to create a zero loss
             reg_loss = torch.zeros_like(num_pos_anchors).float()
         else:
-            reg_loss = self.reg_loss_fn(reg_output, reg_target) * self.reg_weight
+            reg_loss = self.reg_loss_fn(reg_output, reg_target)
 
         if self.use_bg_predictor:
             # Get background output and targets
@@ -448,7 +448,7 @@ class ComputeLosses(torch.nn.Module):
                 cls_loss = self.cls_loss_fn(cls_output, cls_target) / num_pos_anchors
 
             # Compute total loss and gather
-            total_loss = bg_loss + cls_loss + reg_loss
+            total_loss = bg_loss + cls_loss + reg_loss * self.reg_weight
             loss_dict = {
                 'bg_loss': bg_loss,
                 'cls_loss': cls_loss,
@@ -465,7 +465,7 @@ class ComputeLosses(torch.nn.Module):
             cls_loss = self.cls_loss_fn(cls_output, cls_target) / num_pos_anchors.clamp(min=10)
 
             # Compute total loss and gather
-            total_loss = cls_loss + reg_loss
+            total_loss = cls_loss + reg_loss * self.reg_weight
             loss_dict = {
                 'cls_loss': cls_loss,
                 'reg_loss': reg_loss,
@@ -502,13 +502,14 @@ class FilterDetections(torch.nn.Module):
         bbox_output_batch = utils_anchors.bbox_transform_inv(anchors[None, ...], reg_output_batch)
         batch_size, _, num_classes = cls_output_batch.shape
 
-        all_detections = []
+        if self.use_bg_predictor:
+            num_classes -= 1
 
+        all_detections = []
         for cls_output, bbox_output in zip(cls_output_batch, bbox_output_batch):
             detections = {'boxes': [], 'scores': [], 'labels': []}
 
             if self.use_bg_predictor:
-                num_classes -= 1
                 inds_keep = cls_output[:, -1] < self.bg_thresh
                 cls_output = cls_output[inds_keep, :-1]
                 bbox_output = bbox_output[inds_keep]
