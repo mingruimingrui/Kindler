@@ -19,6 +19,10 @@ logger = logging.getLogger(__name__)
 VGG_MEAN = [123.675, 116.28, 103.53]
 VGG_STD = [58.395, 57.12, 57.375]
 
+# format VGG weights to more easily be applied to image arrays
+VGG_MEAN = np.array(VGG_MEAN)[np.newaxis, np.newaxis, :]
+VGG_STD = np.array(VGG_STD)[np.newaxis, np.newaxis, :]
+
 
 def check_image_is_numpy(image):
     assert isinstance(image, np.ndarray)
@@ -194,9 +198,7 @@ class ImageNormalization(object):
 
     def __call__(self, item):
         check_image_is_numpy(item['image'])
-        item['image'][..., 0] = (item['image'][..., 0] - VGG_MEAN[0]) / VGG_STD[0]
-        item['image'][..., 1] = (item['image'][..., 1] - VGG_MEAN[1]) / VGG_STD[1]
-        item['image'][..., 2] = (item['image'][..., 2] - VGG_MEAN[2]) / VGG_STD[2]
+        item['image'] = (item['image'] - VGG_MEAN) / VGG_STD
         return item
 
 
