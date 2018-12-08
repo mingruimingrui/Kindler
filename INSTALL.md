@@ -10,7 +10,7 @@ tqdm
 requests
 ```
 
-Kindler has been tested extensively on both `python2.7` and `python3.5`. Other `python3` version should work just as well.
+**Kindler** has been tested extensively on both `python2.7` and `python3.5`. Other `python3` version should work just as well.
 
 The currently implementation requires `pytorch>=1.0` where the `extension.h` module is exposed which allows users to easily compile `.cpp` and `.cu` files for use in `pytorch`. At this moment of writing, `pytorch1.0` is still in beta so install `pytorch-nightly`.
 
@@ -22,7 +22,7 @@ conda install -c pytorch pytorch-nightly
 
 ## Installation
 
-The easiest way to use **Kindler** is to install it as a package so do it as you would always do
+The easiest way to use **Kindler** is to install it as a package.
 
 ```
 git clone git@github.com:mingruimingrui/Kindler.git
