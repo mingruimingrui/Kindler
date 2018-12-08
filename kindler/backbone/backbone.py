@@ -25,9 +25,10 @@ class Backbone(torch.nn.Module):
             self._use_groupnorm()
 
     def forward(self, x):
-        features = {}
-        for i, layer in enumerate(self.layers, 1):
-            x = layer(x)
+        features = dict()
+        for i, layer_names in enumerate(self._layer_names_list, 1):
+            for layer_name in layer_names:
+                x = getattr(self, layer_name)(x)
             if i >= 2:
                 features[i] = x
         return features
@@ -35,43 +36,51 @@ class Backbone(torch.nn.Module):
     def _make_resnet_modules(self):
         resnet_model_fn = getattr(torchvision.models, self.config.TYPE)
         resnet_model = resnet_model_fn(pretrained=self.config.PRETRAINED)
-        layers = []
+        self._layer_names_list = []
 
         # C1 layer
-        layers.append(torch.nn.Sequential(
-            resnet_model.conv1,
-            resnet_model.bn1,
-            resnet_model.relu
-        ))
+        self.conv1 = resnet_model.conv1
+        self.bn1 = resnet_model.bn1
+        self.relu = resnet_model.relu
+        self._layer_names_list.append([
+            'conv1',
+            'bn1',
+            'relu'
+        ])
 
         # C2 layer
         if self.config.LAST_CONV >= 2:
-            layers.append(torch.nn.Sequential(
-                resnet_model.maxpool,
-                resnet_model.layer1
-            ))
+            self.maxpool = resnet_model.maxpool
+            self.layer1 = resnet_model.layer1
+            self._layer_names_list.append([
+                'maxpool',
+                'layer1'
+            ])
 
         # C3 layer
         if self.config.LAST_CONV >= 3:
-            layers.append(resnet_model.layer2)
+            self.layer2 = resnet_model.layer2
+            self._layer_names_list.append(['layer2'])
 
         # C4 layer
         if self.config.LAST_CONV >= 4:
-            layers.append(resnet_model.layer3)
+            self.layer3 = resnet_model.layer3
+            self._layer_names_list.append(['layer3'])
 
         # C5 layer
         if self.config.LAST_CONV >= 5:
-            layers.append(resnet_model.layer4)
+            self.layer4 = resnet_model.layer4
+            self._layer_names_list.append(['layer4'])
 
-        self.layers = torch.nn.ModuleList(layers)
         del resnet_model
 
     def _freeze_backbone(self):
-        for i, layer in enumerate(self.layers, 1):
+        for i, layer_names in enumerate(self._layer_names_list, 1):
             if self.config.FREEZE_AT < i:
                 continue
-            for param in layer.parameters():
-                param.requires_grad = False
+            for layer_name in layer_names:
+                for param in getattr(self, layer_name).parameters():
+                    param.requires_grad = False
 
     def _freeze_batchnorm(self):
         for layer in self.modules():
